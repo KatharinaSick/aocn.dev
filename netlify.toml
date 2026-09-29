@@ -1,0 +1,14 @@
+# Build configuration for the website. Kept in the repository rather than in the
+# Netlify UI so connecting a site (or recreating one) needs no dashboard setup.
+
+[build]
+  # The site lives in web/; Netlify runs the build from there and installs its
+  # dependencies there. Paths below are relative to this base.
+  base    = "web"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Astro 7 requires Node >= 22.12. Pinned to the same major as devbox's nodejs@24
+  # so a build that passes locally is not built against a different Node here.
+  NODE_VERSION = "24"

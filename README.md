@@ -38,5 +38,12 @@ devbox run web      # website on :4321
 | `devbox run web` | Astro dev server |
 | `devbox run build` | Production build of the website |
 
-This README grows as things land: the API, the database and deployment get documented once they
-actually exist.
+## Deployment
+
+The website deploys to Netlify from `web/`. Build settings live in `netlify.toml` at the repository
+root rather than in the Netlify UI, so a site can be connected or recreated without dashboard setup.
+
+`aocn.dev` is the canonical domain; `adventofcloudnative.dev` is attached to the same site and
+redirects to it.
+
+This README grows as things land: the API and the database get documented once they actually exist.
