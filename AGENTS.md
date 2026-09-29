@@ -61,7 +61,8 @@ Decided, not yet implemented — nothing in this repository is built yet.
 - **Language**: TypeScript.
 - **Deployment**: Netlify, via `@astrojs/netlify`.
 - **Content**: Astro content collections (`web/src/content/`).
-- **No i18n**: The site is English only. Do not add vue-i18n or translation layers.
+- **No i18n**: The site is English only. Do not add vue-i18n, Astro's i18n routing, or any
+  translation layer.
 
 ## API Tech Stack
 Not created yet. When it is added it follows the same stack as `KatharinaSick/clubrizer`:
@@ -90,14 +91,21 @@ Not created yet. When it is added it follows the same stack as `KatharinaSick/cl
 - **TypeScript**: Always use TypeScript. Avoid `any` where possible.
 - **Components**: Prefer reusing existing components in `web/src/components` over native HTML
   elements, and extend them with new props when a variant is needed.
-- **Styling**: Scoped styles (`<style>` in `.astro`, `<style scoped>` in Vue).
+- **Styling**: Scoped styles (`<style>` in `.astro`, `<style scoped>` in Vue) plus the design
+  tokens are the whole styling system. Do not add a CSS framework or utility-class library — the
+  tokens are the constraint that keeps the site consistent.
   - **CSS Variables**: Always use the design tokens in `web/src/styles/base.css`. Never
     hardcode colors, font sizes, font weights, spacing, radii or shadows.
+  - **A deliberate scale, not a changelog**: The token set is decided as a scale. Adding a value
+    means deciding it belongs in the scale — do not append one-off variables per page.
   - **Class Naming**: camelCase, prefixed with the component name (e.g. `.doorCardHeader`).
 - **Dates**: Door opening times are defined once in `web/src/lib/doors.ts`. Never hardcode a
   date anywhere else.
 - **SEO**: Every page sets its own title, description and social image through `BaseLayout`. The
   landing page and the profile pages are what get shared — treat their previews as a feature.
+- **Dev server**: `astro dev` blocks the terminal. Agents should start it with
+  `astro dev --background` and manage it with `astro dev stop`, `astro dev status` and
+  `astro dev logs`. `devbox run web` stays foreground, which is what a human wants.
 
 ### Rendering
 - Pages are prerendered by default. A page that depends on per-request data sets
@@ -117,3 +125,17 @@ Not created yet. When it is added it follows the same stack as `KatharinaSick/cl
   loading the adapter in dev pulls in Netlify's platform emulation for features this site does not
   use. If the site ever does use one — the Image CDN for social images, or Blobs-backed sessions —
   local dev will not emulate it and that decision needs revisiting.
+
+## Design System
+A living design system page lives at `/design-system` (`web/src/pages/design-system.astro`). It
+documents every design token (colors, typography, spacing, radii, shadows) and shows every reusable
+component with usage notes.
+
+**When to update it:**
+- A new component is added to `web/src/components` → add a section demonstrating it.
+- An existing component gains a new prop, variant or state → update its section.
+- A new token is added to `base.css` → add it to the relevant token section.
+
+The page uses the real components, not mocks, so it doubles as a smoke test that they still render.
+It is the reason token drift is visible instead of theoretical — keep it current in the same change
+that introduces the component or token.

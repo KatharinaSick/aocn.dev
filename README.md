@@ -15,9 +15,28 @@ The challenges and the `aocn` CLI live in their own repositories.
 
 ## Status
 
-Nothing is built yet. The stack is decided — Astro with Vue islands on Netlify, a Go API on Cloud
-Run, Postgres — and written down in [AGENTS.md](AGENTS.md), but this repository currently contains
-only documentation.
+Early scaffolding. The website is a placeholder page; there is no API, no database and no
+deployment yet. The full stack is decided and written down in [AGENTS.md](AGENTS.md).
 
-This README grows as things land: layout, local setup and deployment get documented once they
+```
+web/    Astro site, deployed to Netlify (placeholder page only)
+```
+
+## Getting started
+
+Everything runs through [devbox](https://www.jetify.com/devbox), which pins Go and Node so nothing
+has to be installed globally.
+
+```sh
+devbox shell
+npm install --prefix web
+devbox run web      # website on :4321
+```
+
+| Command | Description |
+|---|---|
+| `devbox run web` | Astro dev server |
+| `devbox run build` | Production build of the website |
+
+This README grows as things land: the API, the database and deployment get documented once they
 actually exist.
