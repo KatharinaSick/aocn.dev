@@ -6,8 +6,10 @@
   ],
   "shell": {
     "scripts": {
-      "web": "npm run dev --prefix web",
-      "build": "npm run build --prefix web"
+      "api":   "go run -C api ./cmd/api-server",
+      "web":   "npm run dev --prefix web",
+      "build": "npm run build --prefix web",
+      "test":  "go -C api test ./..."
     }
   }
 }
