@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.astro/
+.netlify/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# devbox
+.devbox/
+logfile
+# The pinned toolchain must be committed. Negated explicitly because a global
+# gitignore may exclude devbox.* — repo rules win, so this keeps the repo correct
+# regardless of local git config.
+!devbox.json
+!devbox.lock
+
+# Editors
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*

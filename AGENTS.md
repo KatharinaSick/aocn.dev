@@ -1,0 +1,119 @@
+# AI Agent Instructions for Advent of Cloud Native
+
+## About
+Advent of Cloud Native is a 24-day Cloud Native advent calendar in the spirit of Advent of Code.
+Twelve CNCF projects get two days each. Every other day starting December 1 a new door opens with a
+5–10 minute maintainer interview and a hands-on challenge that takes 15–30 minutes. Challenges start
+from something running and broken; players fix them and verify against a live cluster with the
+`aocn` CLI. Points decay with each verification attempt and over time, so players can catch up at
+any point.
+
+The whole calendar tells one story: Pola, the dry AI of an Arctic research station, spends December
+watching a stranded crew break everything on her cluster. Players are the station's new engineer.
+
+This repository is the website. The challenges live in their own public repository and the `aocn`
+CLI is a separate project — both are out of scope here.
+
+## Repository
+GitHub: `KatharinaSick/aocn.dev`
+
+## Ways of Working
+This project is built in small, separately verifiable steps, not in big chunks. The point is that
+every step can be reviewed and trusted on its own — a large drop of code nobody can check is worse
+than slow progress.
+
+- **Where tasks come from**: Work is tracked in Asana, which agents cannot read. The task is
+  whatever the conversation states — do not go looking for GitHub issues, there are none.
+- **One task at a time**: Work on a single task, finish it, and stop. Do not roll the next task
+  into the current one because it is convenient.
+- **A task is small enough when it can be verified on its own.** If checking the result means
+  "look at the whole site and see if it feels right", the task is too big — split it.
+- **Say how it was verified**: Every finished step reports what was actually run or checked, not
+  just what was written. Never describe something as working without having run it.
+- **No speculative building**: Do not add structure, abstractions or pages the current task does
+  not ask for.
+- **Approval**: Always ask for approval before implementing any changes.
+- **Clarification**: Never guess. If anything is unclear, ask for clarification until the task is
+  fully understood.
+- **Implementation**: Do not implement new features or significant changes without explicit
+  approval. Planning should precede implementation.
+
+## General Guidelines
+- **Audience**: End users are developers and platform engineers. Technical language is fine, but the
+  calendar should stay playful — it is a game, not documentation.
+- **Pola's voice**: Any in-story text is Pola speaking: dry, understated, faintly exasperated with
+  the crew, never cutesy and never cruel. She states facts and lets them land. Keep her logs short.
+- **Spoilers**: Never put challenge solutions, or hints specific enough to substitute for solving,
+  into this repository. It is public.
+- **Full-stack security**: Always think about the full picture — this project has a website, an API
+  and a CLI. Hiding or restricting something in the website is not security. Any access control must
+  be enforced in the API as well.
+- **Door gating**: A door's content must not be reachable before it opens, including via the API or
+  a prerendered page. Gate on the server, not just in the UI.
+
+## Git Commits
+- **Style**: Use [Conventional Commits](https://www.conventionalcommits.org/) (e.g. `feat:`, `fix:`,
+  `chore:`, `docs:`).
+
+## Website Tech Stack
+Decided, not yet implemented — nothing in this repository is built yet.
+- **Framework**: Astro 7, with Vue 3 islands for anything interactive.
+- **Language**: TypeScript.
+- **Deployment**: Netlify, via `@astrojs/netlify`.
+- **Content**: Astro content collections (`web/src/content/`).
+- **No i18n**: The site is English only. Do not add vue-i18n or translation layers.
+
+## API Tech Stack
+Not created yet. When it is added it follows the same stack as `KatharinaSick/clubrizer`:
+- **Language**: Go.
+- **Database Driver**: pgx/v5 (PostgreSQL).
+- **Validation**: go-playground/validator.
+- **Authentication**: golang-jwt/jwt/v5. Login is GitHub OAuth only — no passwords, no email login.
+- **Configuration**: yaml.v3.
+- **Hosting**: Cloud Run, reached from Netlify through an `/api/*` proxy in `netlify.toml`.
+
+## Testing
+- The schedule and the door gating must have unit tests: the code that decides when a door opens, and
+  the code that decides whether a door's content may be shown. A mistake in either cannot be undone
+  once it is public.
+- Scoring, points decay and anything the `aocn` CLI submits are in the same category when they arrive.
+- Layout and styling do not need tests.
+- Tests run in the build, so a broken invariant fails the deploy rather than reaching production.
+
+## Coding Conventions
+
+### Astro / Vue
+- **Astro by default**: Write pages and components as `.astro` unless they need client-side state.
+  Reach for a Vue island only when there is real interactivity, and give it the narrowest
+  `client:*` directive that works (`client:visible` over `client:load` where possible).
+- **Vue components**: Single File Components with `<script setup lang="ts">`, Composition API.
+- **TypeScript**: Always use TypeScript. Avoid `any` where possible.
+- **Components**: Prefer reusing existing components in `web/src/components` over native HTML
+  elements, and extend them with new props when a variant is needed.
+- **Styling**: Scoped styles (`<style>` in `.astro`, `<style scoped>` in Vue).
+  - **CSS Variables**: Always use the design tokens in `web/src/styles/base.css`. Never
+    hardcode colors, font sizes, font weights, spacing, radii or shadows.
+  - **Class Naming**: camelCase, prefixed with the component name (e.g. `.doorCardHeader`).
+- **Dates**: Door opening times are defined once in `web/src/lib/doors.ts`. Never hardcode a
+  date anywhere else.
+- **SEO**: Every page sets its own title, description and social image through `BaseLayout`. The
+  landing page and the profile pages are what get shared — treat their previews as a feature.
+
+### Rendering
+- Pages are prerendered by default. A page that depends on per-request data sets
+  `export const prerender = false`. Player profiles are on-demand so their link previews can show
+  real progress; keep the set of on-demand pages as small as possible.
+- **Why there is a Netlify function at all, given the API is Go.** `/u/<handle>` is the only page
+  that cannot be prerendered — a handle is not known until someone visits. Its `og:*` tags have to
+  contain that player's real progress, and meta tags cannot be filled in by client-side JavaScript
+  as far as crawlers are concerned. So some server has to render that HTML per request.
+  It is the Netlify function rather than Go on purpose: the function contains no business logic, no
+  auth decisions and no database access — it fetches JSON from the Go API and renders the same Astro
+  layout every other page uses. Rendering it in Go instead would mean a second copy of the layout,
+  header, footer and class names in `html/template`, free to drift from the real site.
+  Keep it that way: no logic in the function, and no second on-demand page unless it genuinely needs
+  per-request HTML.
+- Load the Netlify adapter only for `astro build`. `astro dev` renders on-demand pages itself, and
+  loading the adapter in dev pulls in Netlify's platform emulation for features this site does not
+  use. If the site ever does use one — the Image CDN for social images, or Blobs-backed sessions —
+  local dev will not emulate it and that decision needs revisiting.
