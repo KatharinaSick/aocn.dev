@@ -21,12 +21,13 @@ There is no database yet. The full stack is decided and written down in [AGENTS.
 ```
 web/    Astro site, deployed to Netlify (placeholder page only)
 api/    Go service (health endpoint only)
+infra/  GCP platform, managed with OpenTofu
 ```
 
 ## Getting started
 
-Everything runs through [devbox](https://www.jetify.com/devbox), which pins Go and Node so nothing
-has to be installed globally.
+Everything runs through [devbox](https://www.jetify.com/devbox), which pins Go, Node and OpenTofu so
+nothing has to be installed globally. `gcloud` is the exception and stays a local install.
 
 ```sh
 devbox shell

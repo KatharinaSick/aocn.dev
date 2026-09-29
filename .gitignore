@@ -11,6 +11,18 @@ dist/
 .env.local
 .env.*.local
 
+# OpenTofu / Terraform
+# .terraform.lock.hcl is intentionally committed: it pins provider versions.
+infra/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+# There is no tfvars file — variables carry defaults. Ignored so one added later
+# cannot be committed by accident.
+*.tfvars
+crash.log
+crash.*.log
+
 # devbox
 .devbox/
 logfile

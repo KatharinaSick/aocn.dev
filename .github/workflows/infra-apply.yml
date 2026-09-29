@@ -1,0 +1,53 @@
+name: Infra apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infra-apply.yml'
+
+# Two applies would fight over the state lock. Never cancel one in flight: a
+# half-applied change is worse than a queued one.
+concurrency:
+  group: infra-apply
+  cancel-in-progress: false
+
+env:
+  TOFU_VERSION: 1.12.5
+
+jobs:
+  apply:
+    name: Apply
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.SA_INFRA_APPLY }}
+
+      - name: Check formatting
+        run: tofu fmt -check -recursive
+        working-directory: infra
+
+      - name: Init
+        run: tofu init -input=false
+        working-directory: infra
+
+      - name: Validate
+        run: tofu validate
+        working-directory: infra
+
+      - name: Apply
+        run: tofu apply -input=false -auto-approve
+        working-directory: infra
