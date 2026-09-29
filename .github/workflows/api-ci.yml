@@ -1,0 +1,45 @@
+name: API
+
+on:
+  pull_request:
+    paths:
+      - 'api/**'
+      - '.github/workflows/api-ci.yml'
+
+# Both jobs are read-only, so cancelling a superseded run costs nothing.
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The Go version comes from go.mod rather than being pinned twice, so it
+      # cannot drift from what devbox installs.
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+
+      - name: Test
+        run: go test ./...
+        working-directory: api
+
+  image:
+    name: Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build
+        run: docker build -t aocn-api:${{ github.sha }} api
