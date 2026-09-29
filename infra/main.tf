@@ -149,9 +149,15 @@ resource "google_service_account_iam_member" "deployer_acts_as_runtime" {
 
 # Project-wide read is enough to plan. Plans run with -lock=false, because writing
 # a lock would need write access to the state bucket and defeat the point.
+#
+# securityReviewer is there because refreshing an *_iam_member resource makes the
+# provider call getIamPolicy on whatever it is attached to, and roles/viewer does
+# not grant that for every resource type — buckets in particular. Reading state is
+# not enough; a plan has to be able to read the policies it manages.
 resource "google_project_iam_member" "infra_plan" {
   for_each = toset([
     "roles/viewer",
+    "roles/iam.securityReviewer",
     "roles/iam.workloadIdentityPoolViewer",
   ])
 
