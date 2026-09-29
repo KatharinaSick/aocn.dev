@@ -15,11 +15,12 @@ The challenges and the `aocn` CLI live in their own repositories.
 
 ## Status
 
-Early scaffolding. The website is a placeholder page; there is no API, no database and no
-deployment yet. The full stack is decided and written down in [AGENTS.md](AGENTS.md).
+Early scaffolding. The website is a placeholder page and the API serves only a health check.
+There is no database yet. The full stack is decided and written down in [AGENTS.md](AGENTS.md).
 
 ```
 web/    Astro site, deployed to Netlify (placeholder page only)
+api/    Go service (health endpoint only)
 ```
 
 ## Getting started
@@ -31,12 +32,27 @@ has to be installed globally.
 devbox shell
 npm install --prefix web
 devbox run web      # website on :4321
+devbox run api      # API on :8080
 ```
 
 | Command | Description |
 |---|---|
 | `devbox run web` | Astro dev server |
+| `devbox run api` | Go API |
 | `devbox run build` | Production build of the website |
+| `devbox run test` | Go tests |
+
+### Telemetry
+
+The API is instrumented with OpenTelemetry and configured entirely through the standard `OTEL_*`
+environment variables, so no backend is named in code. With no endpoint set, spans are printed to
+stdout, which is why local development needs no collector:
+
+```sh
+OTEL_EXPORTER_OTLP_ENDPOINT=https://<env>.live.dynatrace.com/api/v2/otlp \
+OTEL_EXPORTER_OTLP_HEADERS="Authorization=Api-Token <token>" \
+devbox run api
+```
 
 ## Deployment
 

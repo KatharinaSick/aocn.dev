@@ -1,0 +1,4 @@
+server:
+  # Cloud Run injects PORT and expects the service to listen on it. Empty locally,
+  # where app.ParseConfig falls back to 8080.
+  port: ${PORT}
