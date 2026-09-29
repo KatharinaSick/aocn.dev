@@ -145,6 +145,14 @@ resource "google_service_account_iam_member" "deployer_acts_as_runtime" {
   member             = "serviceAccount:${google_service_account.deployer.email}"
 }
 
+# Creating a service that runs as api_runtime counts as acting as it. serviceAccountAdmin
+# is not enough: it can administer service accounts without being allowed to use one.
+resource "google_service_account_iam_member" "infra_apply_acts_as_runtime" {
+  service_account_id = google_service_account.api_runtime.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.infra_apply.email}"
+}
+
 # --- infra permissions ------------------------------------------------------
 
 # Project-wide read is enough to plan. Plans run with -lock=false, because writing
@@ -183,6 +191,7 @@ resource "google_project_iam_member" "infra_apply" {
     "roles/iam.serviceAccountAdmin",
     "roles/iam.workloadIdentityPoolAdmin",
     "roles/resourcemanager.projectIamAdmin",
+    "roles/run.admin",
     "roles/secretmanager.admin",
     "roles/serviceusage.serviceUsageAdmin",
     "roles/storage.admin",
@@ -280,4 +289,55 @@ resource "google_secret_manager_secret_iam_member" "api_runtime_reads" {
   secret_id = google_secret_manager_secret.secrets[each.key].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.api_runtime.email}"
+}
+
+# ---------------------------------------------------------------------------
+# The service
+# ---------------------------------------------------------------------------
+
+# What the service is stays here; what it runs does not. A deploy changes only the
+# image, so that one field is ignored and the two never revert each other.
+resource "google_cloud_run_v2_service" "api" {
+  name     = "aocn-api"
+  location = var.region
+
+  # Reached over the public internet: the Netlify /api/* proxy is an ordinary HTTPS
+  # client, not something inside this project.
+  ingress = "INGRESS_TRAFFIC_ALL"
+
+  # This file describes the service completely, so a destroy is recoverable. Blocking
+  # one silently is worse than the mistake it would prevent.
+  deletion_protection = false
+
+  template {
+    service_account = google_service_account.api_runtime.email
+
+    scaling {
+      # Nothing running costs nothing. Cold starts are fine for a calendar that opens
+      # a door every other day; this is the first number to raise if they are not.
+      min_instance_count = 0
+      max_instance_count = 3
+    }
+
+    containers {
+      # Replaced by the first deploy. ignore_changes below is what stops every later
+      # apply from putting it back.
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image]
+  }
+
+  depends_on = [google_project_service.enabled]
+}
+
+# Public, because the Netlify proxy forwards anonymous visitors and there is no
+# caller identity for Cloud Run to check. Deciding who may do what is the API's job.
+resource "google_cloud_run_v2_service_iam_member" "public" {
+  name     = google_cloud_run_v2_service.api.name
+  location = google_cloud_run_v2_service.api.location
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }

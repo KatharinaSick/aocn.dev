@@ -16,8 +16,9 @@ Authentication is Application Default Credentials: `gcloud auth application-defa
 ## Not managed here
 
 - **The project**, because it is tied to billing.
-- **Container images and Cloud Run revisions**, which the deploy workflow will own. Having both
-  manage them would mean every plan proposed reverting the other.
+- **The image the service runs.** OpenTofu describes the service — its identity, scaling and
+  ingress — but a deploy changes only the image, so that one field is ignored here. Managing it
+  in both places would mean every plan proposed reverting the last deploy.
 - **Secret values.** OpenTofu writes everything it knows to state, so secrets are created
   empty and filled in separately:
 

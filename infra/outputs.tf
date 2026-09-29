@@ -37,3 +37,8 @@ output "state_bucket" {
   description = "Bucket holding this configuration's state."
   value       = google_storage_bucket.state.name
 }
+
+output "api_url" {
+  description = "HTTPS URL the Cloud Run service is served at."
+  value       = google_cloud_run_v2_service.api.uri
+}
