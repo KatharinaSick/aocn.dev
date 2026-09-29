@@ -1,0 +1,55 @@
+name: Infra plan
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infra-plan.yml'
+
+# Read-only, so cancelling a superseded run costs nothing.
+concurrency:
+  group: infra-plan-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TOFU_VERSION: 1.12.5
+
+jobs:
+  plan:
+    name: Plan
+    # A pull request from a fork gets a read-only token, so `id-token: write` is
+    # never granted and authenticating to GCP cannot work. Skipping says that;
+    # running would just fail on every fork pull request.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # to request the OIDC token for Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.SA_INFRA_PLAN }}
+
+      - name: Check formatting
+        run: tofu fmt -check -recursive
+        working-directory: infra
+
+      - name: Init
+        run: tofu init -input=false
+        working-directory: infra
+
+      - name: Validate
+        run: tofu validate
+        working-directory: infra
+
+      - name: Plan
+        run: tofu plan -input=false -lock=false
+        working-directory: infra

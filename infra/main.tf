@@ -1,0 +1,277 @@
+locals {
+  services = [
+    "artifactregistry.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "run.googleapis.com",
+    "secretmanager.googleapis.com",
+    "storage.googleapis.com",
+    "sts.googleapis.com",
+  ]
+
+  secrets = [
+    "dynatrace-otlp-token",
+  ]
+}
+
+# Destroying this configuration should not disable APIs other resources still need.
+resource "google_project_service" "enabled" {
+  for_each = toset(local.services)
+
+  service            = each.value
+  disable_on_destroy = false
+}
+
+# ---------------------------------------------------------------------------
+# State
+# ---------------------------------------------------------------------------
+
+resource "google_storage_bucket" "state" {
+  name     = "${var.project_id}-tofu-state"
+  location = var.region
+
+  public_access_prevention    = "enforced"
+  uniform_bucket_level_access = true
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    condition {
+      num_newer_versions = 20
+    }
+    action {
+      type = "Delete"
+    }
+  }
+
+  # This bucket holds the state describing it.
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [google_project_service.enabled]
+}
+
+# ---------------------------------------------------------------------------
+# Container images
+# ---------------------------------------------------------------------------
+
+resource "google_artifact_registry_repository" "docker" {
+  repository_id = "aocn"
+  location      = var.region
+  format        = "DOCKER"
+  description   = "Container images for the Advent of Cloud Native API"
+
+  # Untagged images accumulate with every deploy and are never rolled back to.
+  cleanup_policies {
+    id     = "delete-untagged"
+    action = "DELETE"
+    condition {
+      tag_state  = "UNTAGGED"
+      older_than = "604800s" # 7 days
+    }
+  }
+
+  depends_on = [google_project_service.enabled]
+}
+
+# ---------------------------------------------------------------------------
+# Identities
+# ---------------------------------------------------------------------------
+
+# Four identities, one per job, so no credential can do more than its job needs:
+# the service at runtime, app deploys, infra plans, infra applies.
+
+# The only identity that can read secrets.
+resource "google_service_account" "api_runtime" {
+  account_id   = "aocn-api"
+  display_name = "Advent of Cloud Native API (Cloud Run runtime)"
+
+  depends_on = [google_project_service.enabled]
+}
+
+# Pushes images and rolls out revisions. Cannot touch infra, and holds no secret
+# access of its own — though whatever it deploys runs as api_runtime, which does.
+# That is inherent to continuous deployment: the boundary is who can reach this
+# identity, not what it can read.
+resource "google_service_account" "deployer" {
+  account_id   = "aocn-deployer"
+  display_name = "Advent of Cloud Native app deploys (GitHub Actions)"
+
+  depends_on = [google_project_service.enabled]
+}
+
+# Read-only. Used by pull requests, which only need to plan.
+resource "google_service_account" "infra_plan" {
+  account_id   = "aocn-infra-plan"
+  display_name = "Advent of Cloud Native infra plan, read-only (GitHub Actions)"
+
+  depends_on = [google_project_service.enabled]
+}
+
+# Applies infra. Only reachable from main.
+resource "google_service_account" "infra_apply" {
+  account_id   = "aocn-infra-apply"
+  display_name = "Advent of Cloud Native infra apply (GitHub Actions)"
+
+  depends_on = [google_project_service.enabled]
+}
+
+# --- app deploy permissions -------------------------------------------------
+
+resource "google_artifact_registry_repository_iam_member" "deployer_push" {
+  location   = google_artifact_registry_repository.docker.location
+  repository = google_artifact_registry_repository.docker.name
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${google_service_account.deployer.email}"
+}
+
+# run.developer, not run.admin: enough to deploy revisions, not enough to change
+# a service's IAM policy and make it public.
+resource "google_project_iam_member" "deployer_run" {
+  project = var.project_id
+  role    = "roles/run.developer"
+  member  = "serviceAccount:${google_service_account.deployer.email}"
+}
+
+# Deploying a service that runs as api_runtime counts as acting as it, so this is
+# granted on that account rather than project-wide.
+resource "google_service_account_iam_member" "deployer_acts_as_runtime" {
+  service_account_id = google_service_account.api_runtime.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.deployer.email}"
+}
+
+# --- infra permissions ------------------------------------------------------
+
+# Project-wide read is enough to plan. Plans run with -lock=false, because writing
+# a lock would need write access to the state bucket and defeat the point.
+resource "google_project_iam_member" "infra_plan" {
+  for_each = toset([
+    "roles/viewer",
+    "roles/iam.workloadIdentityPoolViewer",
+  ])
+
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.infra_plan.email}"
+}
+
+resource "google_storage_bucket_iam_member" "infra_plan_reads_state" {
+  bucket = google_storage_bucket.state.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.infra_plan.email}"
+}
+
+# Scoped to the resource types this configuration manages rather than owner. That
+# bounds what a wrong plan can damage; it is not a containment boundary, because
+# projectIamAdmin can grant any role to any principal. Treat this as owner-equivalent
+# once reached — what actually protects it is the binding below, which lets only
+# refs/heads/main assume it.
+resource "google_project_iam_member" "infra_apply" {
+  for_each = toset([
+    "roles/artifactregistry.admin",
+    "roles/iam.serviceAccountAdmin",
+    "roles/iam.workloadIdentityPoolAdmin",
+    "roles/resourcemanager.projectIamAdmin",
+    "roles/secretmanager.admin",
+    "roles/serviceusage.serviceUsageAdmin",
+    "roles/storage.admin",
+  ])
+
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.infra_apply.email}"
+}
+
+# --- Workload Identity Federation -------------------------------------------
+
+# Lets GitHub Actions authenticate with its OIDC token, so there is no service
+# account key to leak.
+resource "google_iam_workload_identity_pool" "github" {
+  workload_identity_pool_id = "github"
+  display_name              = "GitHub Actions"
+
+  depends_on = [google_project_service.enabled]
+}
+
+resource "google_iam_workload_identity_pool_provider" "github" {
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
+  workload_identity_pool_provider_id = "github"
+  display_name                       = "GitHub Actions OIDC"
+
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+
+  attribute_mapping = {
+    "google.subject"             = "assertion.sub"
+    "attribute.repository"       = "assertion.repository"
+    "attribute.repository_owner" = "assertion.repository_owner"
+    "attribute.ref"              = "assertion.ref"
+  }
+
+  # Without this, a workflow in any GitHub repository could present a valid token
+  # to this provider.
+  attribute_condition = "assertion.repository == \"${var.github_repository}\""
+}
+
+# Planning is read-only, so any workflow run in this repository may do it.
+resource "google_service_account_iam_member" "github_plans" {
+  service_account_id = google_service_account.infra_plan.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repository}"
+}
+
+# Anything that can change something is scoped by ref, not by repository.
+#
+# A pull request runs the workflow file from its own head, so it can rewrite the
+# workflow to ask for these identities. It cannot change the ref its OIDC token is
+# issued for: pull request runs get refs/pull/N/merge. Scoping here rather than in
+# the workflow puts the boundary somewhere a pull request author cannot edit.
+#
+# The provider's attribute_condition already restricts tokens to this repository,
+# so matching on ref alone still means "this repository, on main".
+resource "google_service_account_iam_member" "github_main_deploys" {
+  for_each = {
+    deployer    = google_service_account.deployer.name
+    infra_apply = google_service_account.infra_apply.name
+  }
+
+  service_account_id = each.value
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.ref/refs/heads/main"
+}
+
+# ---------------------------------------------------------------------------
+# Secrets
+# ---------------------------------------------------------------------------
+
+# Containers only: anything OpenTofu knows ends up in state, so versions are
+# added out of band.
+resource "google_secret_manager_secret" "secrets" {
+  for_each = toset(local.secrets)
+
+  secret_id = each.value
+
+  replication {
+    auto {}
+  }
+
+  depends_on = [google_project_service.enabled]
+}
+
+# Only the running service reads secrets; the deployer does not.
+#
+# for_each iterates the static list rather than google_secret_manager_secret.secrets:
+# keys taken from a resource that does not exist yet are unknown at plan time.
+resource "google_secret_manager_secret_iam_member" "api_runtime_reads" {
+  for_each = toset(local.secrets)
+
+  secret_id = google_secret_manager_secret.secrets[each.key].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.api_runtime.email}"
+}
