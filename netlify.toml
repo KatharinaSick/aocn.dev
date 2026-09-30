@@ -1,4 +1,4 @@
-# Build configuration for the website. Kept in the repository rather than in the
+# Netlify configuration for the website. Kept in the repository rather than in the
 # Netlify UI so connecting a site (or recreating one) needs no dashboard setup.
 
 [build]
@@ -12,3 +12,20 @@
   # Astro 7 requires Node >= 22.12. Pinned to the same major as devbox's nodejs@24
   # so a build that passes locally is not built against a different Node here.
   NODE_VERSION = "24"
+
+# The API runs on Cloud Run. Proxying it under this origin rather than calling it
+# directly means the browser only ever talks to aocn.dev: no CORS preflight to
+# configure, and no cookie that has to be marked cross-site.
+#
+# status = 200 makes this a rewrite rather than a redirect, so the Cloud Run URL
+# never reaches the client. The API serves its routes at the root, so :splat drops
+# the /api prefix: /api/health reaches the service as /health.
+#
+# The URL is hardcoded because netlify.toml cannot read variables. It is not a
+# secret — the service is public — but it is generated, so `tofu output -raw
+# api_url` is the source of truth if it ever changes.
+[[redirects]]
+  from   = "/api/*"
+  to     = "https://aocn-api-zczz3wlwwa-ew.a.run.app/:splat"
+  status = 200
+  force  = true
