@@ -1,0 +1,64 @@
+---
+// A square, lowercase-verb button.
+//
+// - primary: aurora fill. One per screen.
+// - secondary: outlined, for everything else.
+// - text: green, underlined text, like a link in running text. For quiet places such as
+//   the man page.
+//
+// The outline uses dim, not line-strong: a control's edge needs 3:1 against the page
+// (WCAG 1.4.11), and line-strong is 1.7:1.
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'button'> {
+  variant?: 'primary' | 'secondary' | 'text';
+}
+
+const { variant = 'secondary', type = 'button', class: className, ...attributes } = Astro.props;
+---
+
+<button class:list={['button', `button-${variant}`, className]} type={type} {...attributes}>
+  <slot />
+</button>
+
+<style>
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--size-control);
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-none);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .button-primary {
+    border: none;
+    background: var(--color-aurora);
+    color: var(--color-bg);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .button-secondary {
+    border: 1px solid var(--color-dim);
+    background: var(--color-panel-glass);
+    color: var(--color-text);
+  }
+
+  .button-secondary:hover {
+    border-color: var(--color-text-soft);
+  }
+
+  /* Keeps the control height as its click area; only the look is reduced to text. */
+  /* Green and underlined, like every link in running text on the site. */
+  .button-text {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-aurora);
+    text-decoration: underline;
+  }
+</style>

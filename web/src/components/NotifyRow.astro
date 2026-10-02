@@ -1,0 +1,70 @@
+---
+// The ways to stay in the loop, in one row: an email per door, or every door in your
+// calendar. Used on the landing page and in the man page's STAYING IN THE LOOP.
+//
+// `quiet` is the man page version: an underlined field and the actions as green text,
+// separated by "or", so it reads like part of the page rather than a call to action. It
+// leaves out the note, because the man page says the same in its text.
+//
+// The email part is not wired up yet: there is no form element, so nothing can be
+// submitted until it is. The calendar menu works. The field is the target of the s key.
+import Button from './Button.astro';
+import CalendarMenu from './CalendarMenu.astro';
+import TextInput from './TextInput.astro';
+
+interface Props {
+  /** Prefix for the ids inside, unique per page. */
+  id: string;
+  quiet?: boolean;
+}
+
+const { id, quiet = false } = Astro.props;
+---
+
+<div class:list={['notifyRow', { notifyRowQuiet: quiet }]}>
+  <div class="notifyRowControls">
+    <TextInput
+      id={`${id}-email`}
+      label="email address"
+      type="email"
+      name="email"
+      autocomplete="email"
+      placeholder="you@example.com"
+      size={40}
+      underline={quiet}
+      data-vim-subscribe
+    />
+    <Button variant={quiet ? 'text' : 'primary'}>notify me</Button>
+    {quiet && <span class="notifyRowOr">or</span>}
+    <CalendarMenu id={`${id}-calendar`} variant={quiet ? 'text' : 'secondary'} />
+  </div>
+  {!quiet && <p class="notifyRowNote">one email per door · unsubscribe anytime</p>}
+</div>
+
+<style>
+  .notifyRow {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .notifyRowControls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  /* Text actions need a little more room between them than outlined buttons. */
+  .notifyRowQuiet .notifyRowControls {
+    gap: var(--space-6);
+  }
+
+  .notifyRowOr {
+    color: var(--color-text);
+  }
+
+  .notifyRowNote {
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+</style>

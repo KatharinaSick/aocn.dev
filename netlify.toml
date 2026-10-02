@@ -12,3 +12,16 @@
   # Astro 7 requires Node >= 22.12. Pinned to the same major as devbox's nodejs@24
   # so a build that passes locally is not built against a different Node here.
   NODE_VERSION = "24"
+
+# Some crawlers and feed readers ask for /favicon.ico without reading the page's <link>
+# tags. Serve them the PNG favicon (a rewrite, so the URL stays the same).
+[[redirects]]
+  from   = "/favicon.ico"
+  to     = "/favicon.png"
+  status = 200
+
+# The door calendar is a static file; calendar apps need the right type to subscribe.
+[[headers]]
+  for = "/calendar.ics"
+  [headers.values]
+    Content-Type = "text/calendar; charset=utf-8"

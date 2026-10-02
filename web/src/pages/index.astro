@@ -1,19 +1,110 @@
 ---
-// Placeholder page. The real landing page arrives with the Advent of Cloud Native
-// preview content — this exists so the deployment pipeline has something to serve.
+// The pre-launch landing page: what this is, the countdown to door 1 and a way to stay
+// in the loop. Nothing about what is behind a door is on this page.
+import Countdown from '../components/Countdown.astro';
+import NotifyRow from '../components/NotifyRow.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import {
+  DOOR_COUNT,
+  doorOpensAt,
+  formatStationClock,
+  formatStationDay,
+  formatStationDayLong,
+} from '../lib/doors';
+
+const firstDoor = doorOpensAt(1);
+const lastDoor = doorOpensAt(DOOR_COUNT);
+
+// "->" is drawn as an arrow by the font's ligature. Screen readers get a sentence instead.
+const schedule = `${DOOR_COUNT} doors · every other day · ${formatStationDay(firstDoor)} -> ${formatStationDay(lastDoor)} · ${formatStationClock(firstDoor)}`;
+const scheduleSentence = `${DOOR_COUNT} doors, one every other day from ${formatStationDayLong(firstDoor)} to ${formatStationDayLong(lastDoor)}, each at ${formatStationClock(firstDoor)}.`;
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>aocn.dev</title>
-  </head>
-  <body>
-    <h1>Hello world</h1>
-    <p>Advent of Cloud Native is not built yet.</p>
-  </body>
-</html>
+<BaseLayout
+  description="A cloud native advent calendar. 12 CNCF projects. 12 broken things. One very tired station AI."
+  pola={{ mood: 'neutral', message: 'The aurora, a quiet cluster and me. I have waited all year for this.' }}
+>
+  <!-- Fades the lower edge of the aurora out below the hero. -->
+  <div class="landingFade" aria-hidden="true"></div>
+
+  <section class="landingHero">
+    <div class="landingIntro">
+      <p class="landingCommand">$ cat /etc/motd</p>
+      <h1 class="landingTitle">advent of cloud native<span class="landingUnderscore" aria-hidden="true">_</span></h1>
+      <p class="landingLead">A cloud native advent calendar. 12 CNCF projects. 12 broken things. One very tired station AI.</p>
+    </div>
+
+    <div class="landingCountdown">
+      <Countdown door={1} />
+      <p class="landingSchedule">
+        <span aria-hidden="true">{schedule}</span>
+        <span class="srOnly">{scheduleSentence}</span>
+      </p>
+    </div>
+
+    <div class="landingNotify">
+      <NotifyRow id="landing" />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* Positioned against the sky (1000px tall, aurora down to ~610px), not the content. */
+  .landingFade {
+    position: absolute;
+    z-index: -1;
+    top: 380px;
+    left: 0;
+    right: 0;
+    height: 280px;
+    background: linear-gradient(180deg, transparent 0%, var(--color-bg) 85%);
+    pointer-events: none;
+  }
+
+  /* Three blocks (intro, countdown, notify) share the height between header and prompt
+     line: at least space-12 around and between them, and any extra space the window has
+     is spread evenly, so the page breathes on tall windows and never scrolls on short ones
+     unless the blocks themselves do not fit. */
+  .landingHero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    gap: var(--space-12);
+    padding: var(--space-12) var(--page-gutter);
+  }
+
+  .landingIntro {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .landingCommand,
+  .landingSchedule {
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+
+  .landingTitle {
+    font-size: var(--font-size-display);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-display);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .landingUnderscore {
+    color: var(--color-aurora);
+  }
+
+  .landingLead {
+    color: var(--color-text-soft);
+    font-size: var(--font-size-lead);
+    line-height: var(--line-height-lead);
+  }
+
+  .landingSchedule {
+    margin-top: var(--space-4);
+  }
+
+</style>

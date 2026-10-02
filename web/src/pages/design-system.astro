@@ -1,0 +1,691 @@
+---
+// The living design system. Every token in base.css is documented here, and every
+// reusable component gets a section when it is added. Values are read from base.css
+// at build time, so this page cannot drift from the real tokens.
+import Countdown from '../components/Countdown.astro';
+import Button from '../components/Button.astro';
+import CalendarMenu from '../components/CalendarMenu.astro';
+import Keycap from '../components/Keycap.vue';
+import NotifyRow from '../components/NotifyRow.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PolaFace, { type PolaMood } from '../components/PolaFace.astro';
+import PromptLine from '../components/PromptLine.astro';
+import TextInput from '../components/TextInput.astro';
+import baseCss from '../styles/base.css?raw';
+
+const moods: PolaMood[] = ['neutral', 'annoyed', 'worried', 'fond'];
+
+interface Token {
+  name: string;
+  usage: string;
+}
+
+const tokenValues = new Map(
+  [...baseCss.matchAll(/--([a-z0-9-]+):\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()]),
+);
+
+function value(name: string): string {
+  const found = tokenValues.get(name);
+  if (found === undefined) throw new Error(`design-system: --${name} is not defined in base.css`);
+  return found;
+}
+
+// WCAG 2.x contrast ratio between two opaque hex colors.
+function luminance(hex: string): number {
+  const channels = hex.replace('#', '').match(/../g) ?? [];
+  const [r, g, b] = channels.map((c) => {
+    const s = parseInt(c, 16) / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(foreground: string, background: string): string {
+  const [light, dark] = [luminance(value(foreground)), luminance(value(background))].sort((a, b) => b - a);
+  return ((light + 0.05) / (dark + 0.05)).toFixed(1);
+}
+
+const surfaces: Token[] = [
+  { name: 'bg', usage: 'Station black. The page ground everywhere; also the ink on aurora and signal fills.' },
+  { name: 'sky-top', usage: 'Top of the night sky gradient. Sky only, never a surface.' },
+  { name: 'sky-mid', usage: 'Middle of the sky gradient; fades into bg by about 70% of the page height.' },
+  { name: 'panel', usage: 'Solid panels, the statusline, the tab bar, tooltips.' },
+  { name: 'panel-glass', usage: 'Panels and door cells over the sky, so the aurora glows through faintly.' },
+  { name: 'panel-new', usage: 'The one newly opened door. Never for anything else.' },
+  { name: 'line', usage: 'Hairline borders, dividers, dashed locked doors.' },
+  { name: 'line-strong', usage: 'Inputs, open doors, secondary buttons, keycaps.' },
+];
+
+const texts: Token[] = [
+  { name: 'text', usage: 'Primary text and headlines.' },
+  { name: 'text-body', usage: 'Story paragraphs and step descriptions.' },
+  { name: 'text-soft', usage: 'The tagline and quieter supporting lines.' },
+  { name: 'muted', usage: 'Meta, labels, $ command labels, dates.' },
+  { name: 'dim', usage: 'Locked doors and faint hints. The lowest color allowed for text.' },
+];
+
+const accents: Token[] = [
+  { name: 'aurora', usage: 'Primary. Links, primary buttons, solved doors, ## headings, the neutral mood.' },
+  { name: 'aurora-bright', usage: 'Lower edge of the aurora curtains only.' },
+  { name: 'signal', usage: 'New doors, the countdown hint, COMMAND mode, the annoyed mood.' },
+  { name: 'violet', usage: 'Aurora tops and glow, the worried mood.' },
+  { name: 'warm', usage: 'The fond mood: subscriptions, the finale, a full profile. Rare on purpose.' },
+  { name: 'error', usage: 'E-messages and form errors.' },
+];
+
+// Colors that carry real text get their contrast on bg and panel. WCAG AA needs 4.5:1.
+const textColors = new Set([...texts.map((t) => t.name), 'aurora', 'signal', 'violet', 'warm', 'error']);
+
+const typeStyles = [
+  { name: 'countdown', sample: '63:14:22', bold: true, usage: 'The countdown digits only.' },
+  { name: 'display', sample: 'advent of cloud native_', bold: true, usage: 'Home and landing headline, door titles.' },
+  { name: 'title', sample: 'the story so far', bold: true, usage: 'Page titles, door numbers, every headline on mobile.' },
+  { name: 'lead', sample: '12 CNCF projects. 12 broken things. One very tired station AI.', bold: false, usage: 'One tagline per page, in text-soft.' },
+  { name: 'body', sample: 'I have waited all year for this.', bold: false, usage: 'Logs, story text, ## headings, buttons, nav, inputs.' },
+  { name: 'small', sample: '$ cat /etc/motd · dec 1 · 06:00 CET', bold: false, usage: '$ commands, meta, labels, dates, keycaps, statusline, footer.' },
+  { name: 'wordmark', sample: 'POLARIS-7', bold: true, usage: 'Her name, in capitals, in the header and on her prompt line.' },
+  { name: 'caps', sample: 'DAYS SINCE LAST INCIDENT', bold: false, usage: 'Tracked capitals for station labels only.' },
+];
+
+function typeSpec(name: string, bold: boolean): string {
+  const tracking = tokenValues.get(`letter-spacing-${name}`);
+  const parts = [value(`font-size-${name}`), value(`line-height-${name}`), bold ? '700' : '400'];
+  if (tracking) parts.push(tracking);
+  return parts.join(' / ');
+}
+
+const spacing: Token[] = [
+  { name: 'space-1', usage: 'Icon to label, keycap to keycap.' },
+  { name: 'space-2', usage: 'Inside rows; the mobile door grid gap.' },
+  { name: 'space-3', usage: 'Related items; the desktop door grid gap.' },
+  { name: 'space-4', usage: 'Card padding; the mobile page edge.' },
+  { name: 'space-6', usage: 'Between blocks inside a section.' },
+  { name: 'space-8', usage: 'Between sections on mobile.' },
+  { name: 'space-12', usage: 'The desktop page edge and between sections.' },
+];
+
+const others: Token[] = [
+  { name: 'radius-none', usage: 'Everything: panels, doors, buttons, inputs, keycaps. The station has square corners.' },
+  { name: 'radius-screen', usage: "POLARIS-7's screen outline only." },
+  { name: 'radius-dot', usage: 'Status dots: the new-door dot, the open ring, the online dot.' },
+  { name: 'glow-new', usage: 'The newly opened door. The only glow on a surface.' },
+  { name: 'shadow-overlay', usage: 'Tooltips, the calendar menu and the ? overlay. Panels never get a shadow.' },
+  { name: 'size-page', usage: 'The desktop design frame. Wider windows keep the content centred in a frame this wide.' },
+  { name: 'page-gutter', usage: 'Left and right page edge: space-12, more on wide windows so the content stays centred.' },
+  { name: 'size-control', usage: 'Button and input height on desktop.' },
+  { name: 'size-touch', usage: 'Minimum tap target on mobile.' },
+  { name: 'size-statusline', usage: 'The vim statusline height.' },
+  { name: 'size-door', usage: 'Desktop door cell (square). Mobile: 120px tall, three per row.' },
+  { name: 'opacity-aurora', usage: 'The aurora on every page.' },
+  { name: 'opacity-aurora-finale', usage: 'The aurora on the Dec 24 finale only.' },
+];
+
+const colorGroups = [
+  { title: 'sky & surfaces', tokens: surfaces },
+  { title: 'text', tokens: texts },
+  { title: 'accents & moods', tokens: accents },
+];
+---
+
+<BaseLayout
+  title="design system"
+  description="Station Console: the design tokens and components of Advent of Cloud Native."
+  noindex
+  pola={{ mood: 'neutral', message: "This is the station's rulebook. The crew has not read it." }}
+>
+  <div class="designSystem">
+    <header class="designSystemHeader">
+      <p class="designSystemCommand">$ cat design-system.md</p>
+      <h1 class="designSystemTitle">station console<span class="designSystemUnderscore">_</span></h1>
+      <p class="designSystemLead">
+        The design system of Advent of Cloud Native. One typeface, square corners, an aurora on the horizon.
+      </p>
+    </header>
+
+    <section class="designSystemSection" aria-labelledby="ds-colors">
+      <p class="designSystemCommand">$ ls tokens/color</p>
+      <h2 class="designSystemHeading" id="ds-colors">## colors</h2>
+
+      {colorGroups.map((group) => (
+        <div class="designSystemGroup">
+          <h3 class="designSystemGroupTitle">{group.title}</h3>
+          <ul class="designSystemSwatches">
+            {group.tokens.map((token) => (
+              <li class="designSystemSwatch">
+                <div class="designSystemSwatchColor" style={`background: var(--color-${token.name})`} />
+                <div class="designSystemSwatchBody">
+                  <p class="designSystemSwatchName">
+                    <code>{token.name}</code>
+                    <code class="designSystemValue">{value(`color-${token.name}`)}</code>
+                  </p>
+                  <p class="designSystemUsage">{token.usage}</p>
+                  {textColors.has(token.name) && (
+                    <p class="designSystemContrast">
+                      {contrast(`color-${token.name}`, 'color-bg')}:1 on bg · {contrast(`color-${token.name}`, 'color-panel')}:1 on panel
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">ghost</h3>
+        <p class="designSystemUsage">
+          <code>ghost</code> <code class="designSystemValue">{value('color-ghost')}</code> — redaction
+          <span class="designSystemGhost" aria-hidden="true">▒▒▒▒</span> and decorative colons only. Never real text
+          ({contrast('color-ghost', 'color-bg')}:1 on bg), always <code>aria-hidden</code>.
+        </p>
+      </div>
+    </section>
+
+    <section class="designSystemSection" aria-labelledby="ds-type">
+      <p class="designSystemCommand">$ ls tokens/type</p>
+      <h2 class="designSystemHeading" id="ds-type">## typography</h2>
+      <p class="designSystemUsage">
+        JetBrains Mono for everything, self-hosted. Two weights (400 · 700). Hierarchy comes from color and the
+        ## and $ prefixes, not from more sizes.
+      </p>
+
+      <ul class="designSystemTypeList">
+        {typeStyles.map((style) => (
+          <li class="designSystemTypeRow">
+            <div>
+              <p class="designSystemSwatchName"><code>{style.name}</code></p>
+              <p class="designSystemValue">{typeSpec(style.name, style.bold)}</p>
+            </div>
+            <div>
+              <p
+                class="designSystemTypeSample"
+                style={[
+                  `font-size: var(--font-size-${style.name})`,
+                  `line-height: var(--line-height-${style.name})`,
+                  `font-weight: var(--font-weight-${style.bold ? 'bold' : 'regular'})`,
+                  tokenValues.has(`letter-spacing-${style.name}`) ? `letter-spacing: var(--letter-spacing-${style.name})` : '',
+                ].join(';')}
+              >
+                {style.sample}
+              </p>
+              <p class="designSystemUsage">{style.usage}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="designSystemSection" aria-labelledby="ds-layout">
+      <p class="designSystemCommand">$ ls tokens/layout</p>
+      <h2 class="designSystemHeading" id="ds-layout">## spacing, radius, shadow & sizes</h2>
+
+      <div class="designSystemColumns">
+        <table class="designSystemTable">
+          <caption class="designSystemGroupTitle">spacing</caption>
+          <tbody>
+            {spacing.map((token) => (
+              <tr>
+                <th scope="row"><code>{token.name}</code></th>
+                <td><div class="designSystemSpaceBar" style={`width: var(--${token.name})`} /></td>
+                <td class="designSystemValue">{value(token.name)}</td>
+                <td class="designSystemUsage">{token.usage}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <table class="designSystemTable">
+          <caption class="designSystemGroupTitle">radius · shadow · size · opacity</caption>
+          <tbody>
+            {others.map((token) => (
+              <tr>
+                <th scope="row"><code>{token.name}</code></th>
+                <td class="designSystemValue">{value(token.name)}</td>
+                <td class="designSystemUsage">{token.usage}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="designSystemSection" aria-labelledby="ds-sky">
+      <p class="designSystemCommand">$ ls sky/</p>
+      <h2 class="designSystemHeading" id="ds-sky">## the sky</h2>
+      <ul class="designSystemRules">
+        <li>
+          Every page has the same night sky, behind everything (<code>Sky.astro</code>, rendered by <code>BaseLayout</code>):
+          a gradient from <code>sky-top</code> through <code>sky-mid</code> into <code>bg</code>, 90 still stars and one diagonal aurora entering from the top right.
+        </li>
+        <li>
+          The curtains are brightest at their lower edge, fade upward into violet and fade out towards the left, so
+          headlines stay readable. The aurora runs at <code>opacity-aurora</code>; <code>opacity-aurora-finale</code> is for
+          Dec 24 only.
+        </li>
+        <li>
+          The aurora's gradient colors are artwork and live in <code>Sky.astro</code>. They are never used for UI.
+        </li>
+        <li>
+          The aurora drifts over 40s and its rays breathe over 11s. The stars never twinkle. Both animations stop
+          under <code>prefers-reduced-motion</code>.
+        </li>
+        <li>It is decorative only: <code>aria-hidden</code>, and it never catches a click.</li>
+      </ul>
+    </section>
+
+    <section class="designSystemSection" aria-labelledby="ds-components">
+      <p class="designSystemCommand">$ ls components/</p>
+      <h2 class="designSystemHeading" id="ds-components">## components</h2>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">PolaFace · mood · size · label</h3>
+        <ul class="designSystemFaces">
+          {moods.map((mood) => (
+            <li class="designSystemFace">
+              <PolaFace mood={mood} size="large" />
+              <PolaFace mood={mood} />
+              <p class="designSystemUsage">{mood}</p>
+            </li>
+          ))}
+        </ul>
+        <ul class="designSystemRules">
+          <li>
+            One pixel grid, one ink per face. The lids carry the mood: none for neutral (also optimistic), low for
+            annoyed, tilted for worried, closed ^ for fond. The ink is the mood's
+            token: <code>aurora</code>, <code>signal</code>, <code>violet</code>, <code>warm</code>.
+          </li>
+          <li>
+            Sizes: <code>small</code> 32 × 24 (header, prompt line, heavier outline), <code>medium</code> 48 × 36
+            (logs), <code>large</code> 112 × 84 (cards), <code>xlarge</code> 160 × 120 (finale).
+          </li>
+          <li>Her eyes blink every 5 seconds; nothing else moves. The blink stops under reduced motion.</li>
+          <li>
+            Screen readers hear "POLARIS-7, &lt;mood&gt;". Pass <code>label=&#123;null&#125;</code> when the text
+            next to her already says it.
+          </li>
+          <li>Use these faces as they are. Never redraw her.</li>
+        </ul>
+      </div>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">PromptLine · mood · message</h3>
+        <PromptLine mood="neutral" message="The aurora, a quiet cluster and me. I have waited all year for this." />
+        <ul class="designSystemRules">
+          <li>
+            Her one line on every page, above the footer: her face in today's mood, one sentence that fits the page,
+            and the page's only blinking cursor. <code>BaseLayout</code> renders it; every page passes its sentence
+            and mood through the required <code>pola</code> prop. (This page shows it twice, so it has two cursors.)
+          </li>
+          <li>
+            Screen readers hear one sentence: "POLARIS-7, neutral: … Days since last incident: 280". The face, the
+            &gt; and the cursor are visual only.
+          </li>
+          <li>
+            The incident counter comes from <code>incidentDays()</code> in <code>doors.ts</code>, rendered at build
+            time and brought up to date by a small script when the page loads. Before launch it counts up from last
+            Christmas Eve, small and in <code>text-soft</code>, so the countdown stays the hero.
+          </li>
+        </ul>
+      </div>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">SiteHeader · SiteFooter</h3>
+        <p class="designSystemUsage">Both are on this page: at the very top and the very bottom.</p>
+        <ul class="designSystemRules">
+          <li>
+            The header has POLARIS-7's mark (the favicon drawing), her name and <code>// station console</code> on the
+            left, and the navigation on the right. The current page is marked with <code>aria-current</code>: aurora,
+            underlined.
+          </li>
+          <li>
+            The footer is small and muted: the domain on the left, the GitHub mark in the middle, the supporter
+            on the right. Its links are underlined but stay muted. The vim keys hint joins
+            it with the keys.
+          </li>
+        </ul>
+      </div>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">Button · variant</h3>
+        <div class="designSystemRow">
+          <Button variant="primary">notify me</Button>
+          <Button>add to calendar</Button>
+          <Button variant="text">notify me</Button>
+        </div>
+        <ul class="designSystemRules">
+          <li>
+            Square, <code>size-control</code> tall, lowercase verbs. <code>primary</code> is the aurora fill, one per
+            screen; <code>secondary</code> is outlined for everything else; <code>text</code> is green, underlined text for quiet places like
+            the man page, keeping the control height as its click area.
+          </li>
+          <li>
+            The outline is <code>dim</code>, not <code>line-strong</code>: a control's edge needs 3:1 against the page,
+            and <code>line-strong</code> is 1.7:1.
+          </li>
+        </ul>
+      </div>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">CalendarMenu · id</h3>
+        <CalendarMenu id="design-system-calendar" />
+        <ul class="designSystemRules">
+          <li>
+            A secondary button that opens two ways to subscribe to <code>/calendar.ics</code>: Google's subscribe link,
+            and a <code>webcal://</code> link for Apple, Outlook and everything else. Both subscribe, so changes reach
+            everyone; nothing is downloaded once and forgotten.
+          </li>
+          <li>
+            A disclosure, not an ARIA menu: <code>aria-expanded</code> on the button, plain links in tab order. Escape,
+            a click outside or tabbing past it closes the list. Arrow keys move between the options; the vim keys
+            <code>h j k l</code> work here like everywhere else.
+          </li>
+        </ul>
+      </div>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">NotifyRow · id</h3>
+        <NotifyRow id="design-system-notify" />
+        <div class="designSystemSpaced"><NotifyRow id="design-system-notify-quiet" quiet /></div>
+        <ul class="designSystemRules">
+          <li>
+            The ways to stay in the loop in one row: the email field, <code>notify me</code> and the calendar menu, with
+            the reassurance below. On the landing page and in the man page's STAYING IN THE LOOP; one component, so
+            both work the same.
+          </li>
+          <li>
+            <code>quiet</code> is the man page version: an underlined field and the actions as green text with "or"
+            between them and no note, so it reads as part of the page rather than a call to action. The landing page keeps the full version.
+          </li>
+          <li>The email field is the target of the <code>s</code> key. The email part does not send anything yet.</li>
+        </ul>
+      </div>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">TextInput · id · label · visibleLabel</h3>
+        <div class="designSystemRow">
+          <TextInput id="design-system-email" label="email address" type="email" placeholder="you@example.com" size={40} />
+          <TextInput id="design-system-name" label="visible label" visibleLabel placeholder="with its label shown" />
+          <TextInput id="design-system-underline" label="underlined" underline placeholder="underline only" />
+        </div>
+        <ul class="designSystemRules">
+          <li>
+            Square, on <code>bg</code> with a <code>dim</code> border (3:1 against the page), placeholder in
+            <code>dim</code>, an <code>aurora</code> focus outline.
+          </li>
+          <li>
+            Every field has a label. It is for screen readers only unless <code>visibleLabel</code> is set. Errors go
+            below the field as a vim-style message, never as a red border alone.
+          </li>
+        </ul>
+      </div>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">Keycap</h3>
+        <div class="designSystemRow">
+          <Keycap>?</Keycap>
+          <Keycap>:man</Keycap>
+          <Keycap>s</Keycap>
+          <Keycap>q</Keycap>
+          <Keycap>esc</Keycap>
+        </div>
+        <ul class="designSystemRules">
+          <li>
+            A key drawn like a keyboard key: <code>line-strong</code> border with a thicker bottom edge,
+            <code>small</code> text. Only in the help overlay; pages never show a legend, they only say "press ? for vim keys".
+          </li>
+          <li><code>:q</code> is never drawn as a keycap, or listed anywhere.</li>
+        </ul>
+      </div>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">VimKeys · statusline · help overlay</h3>
+        <p class="designSystemUsage">
+          On every page, through <code>BaseLayout</code>. Press <Keycap>?</Keycap> on this page to open the help, or
+          type <Keycap>:</Keycap> to see the statusline.
+        </p>
+        <ul class="designSystemRules">
+          <li>
+            Keys work anywhere without clicking first, never while typing in a field and never with Ctrl, Cmd or Alt.
+            <code>h j k l</code> move the focus to the nearest link or button in that direction
+            (<code>lib/spatial.ts</code>). They skip text fields, where letters type; Esc leaves a field. The commands live in <code>lib/vim.ts</code>. Both have
+            tests.
+          </li>
+          <li>
+            The statusline appears once someone uses a key: <code>NORMAL</code> in
+            <code>aurora</code>, <code>COMMAND</code> in <code>signal</code>, errors in <code>error</code>. It is fixed to the bottom of the
+            window, and the page gets room for it. Screen readers hear messages through a live region.
+          </li>
+          <li>
+            The help overlay is a native modal <code>&lt;dialog&gt;</code>. It lists the keys in two groups:
+            "everywhere", the same on every page, and "on this page" where a page has its own. It has the on/off
+            switch (<code>:set nokeys</code> also switches them off): off means off, <code>?</code> included. The footer button always
+            opens it.
+          </li>
+        </ul>
+      </div>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">Countdown · door</h3>
+        <Countdown door={1} />
+        <ul class="designSystemRules">
+          <li>
+            Days, hours, minutes and seconds to a door, in the <code>countdown</code> type style. Seconds are
+            in <code>aurora</code>; the colons are decorative <code>ghost</code>.
+          </li>
+          <li>
+            The label adds the visitor's own time when it is not CET. Screen readers get one sentence that never
+            changes; the ticking digits are hidden from them.
+          </li>
+          <li>
+            Until the script runs the digits show <code>--</code>, never numbers from the build. Under reduced motion
+            the seconds are hidden and it updates once a minute. At zero it stops.
+          </li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .designSystem {
+    padding: var(--space-12) var(--page-gutter);
+  }
+
+  .designSystemHeader,
+  .designSystemSection {
+    margin-bottom: var(--space-12);
+  }
+
+  .designSystemCommand {
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+
+  .designSystemTitle {
+    font-size: var(--font-size-display);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-display);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .designSystemUnderscore {
+    color: var(--color-aurora);
+  }
+
+  .designSystemLead {
+    margin-top: var(--space-3);
+    color: var(--color-text-soft);
+    font-size: var(--font-size-lead);
+    line-height: var(--line-height-lead);
+  }
+
+  .designSystemHeading {
+    margin-bottom: var(--space-6);
+    color: var(--color-aurora);
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-regular);
+  }
+
+  .designSystemGroup {
+    margin-bottom: var(--space-6);
+  }
+
+  .designSystemGroupTitle {
+    margin-bottom: var(--space-3);
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-regular);
+    text-align: left;
+  }
+
+  .designSystemSwatches {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+    padding: 0;
+    list-style: none;
+  }
+
+  .designSystemSwatch {
+    border: 1px solid var(--color-line);
+    background: var(--color-panel);
+  }
+
+  .designSystemSwatchColor {
+    height: var(--space-12);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .designSystemSwatchBody {
+    padding: var(--space-3);
+  }
+
+  .designSystemSwatchName {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-2);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .designSystemValue {
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-regular);
+  }
+
+  .designSystemUsage {
+    color: var(--color-text-soft);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+
+  .designSystemContrast {
+    margin-top: var(--space-2);
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+
+  .designSystemGhost {
+    color: var(--color-ghost);
+  }
+
+  .designSystemTypeList {
+    margin: var(--space-6) 0 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--color-line);
+    background: var(--color-panel);
+  }
+
+  .designSystemTypeRow {
+    display: grid;
+    grid-template-columns: 1fr 4fr;
+    gap: var(--space-6);
+    align-items: center;
+    padding: var(--space-4);
+  }
+
+  .designSystemTypeRow + .designSystemTypeRow {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .designSystemTypeSample {
+    margin-bottom: var(--space-2);
+  }
+
+  .designSystemColumns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    align-items: start;
+  }
+
+  .designSystemTable {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--color-line);
+    background: var(--color-panel);
+  }
+
+  .designSystemTable caption {
+    padding: var(--space-4) var(--space-4) 0;
+    margin-bottom: 0;
+  }
+
+  .designSystemTable th,
+  .designSystemTable td {
+    padding: var(--space-1) var(--space-4);
+    text-align: left;
+    vertical-align: top;
+    font-weight: var(--font-weight-regular);
+  }
+
+  .designSystemRules {
+    display: grid;
+    gap: var(--space-2);
+    max-width: 80ch;
+    margin-top: var(--space-4);
+    padding-left: var(--space-4);
+    color: var(--color-text-body);
+  }
+
+  .designSystemSpaced {
+    margin-top: var(--space-6);
+  }
+
+  .designSystemRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .designSystemFaces {
+    display: flex;
+    gap: var(--space-3);
+    padding: 0;
+    list-style: none;
+  }
+
+  .designSystemFace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-6);
+    border: 1px solid var(--color-line);
+    background: var(--color-panel);
+  }
+
+  .designSystemSpaceBar {
+    height: var(--space-3);
+    margin-top: var(--space-1);
+    background: var(--color-aurora);
+  }
+
+  code {
+    font-family: inherit;
+  }
+</style>

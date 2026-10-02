@@ -1,0 +1,134 @@
+---
+// The shell every page renders in: document head, SEO and social preview tags, the
+// font, the design tokens, the sky, the skip link, the header, POLARIS-7's prompt line
+// and the footer.
+import { Font } from 'astro:assets';
+import type { PolaMood } from '../components/PolaFace.astro';
+import PromptLine from '../components/PromptLine.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import Sky from '../components/Sky.astro';
+import VimKeys from '../components/VimKeys.vue';
+import '../styles/base.css';
+
+const SITE_NAME = 'Advent of Cloud Native';
+
+interface Props {
+  /** Page title. Omit on the landing page, which is titled by the site name alone. */
+  title?: string;
+  /** Meta and social preview description. Every page sets its own. */
+  description: string;
+  /** Social preview image, as a path under public/ or an absolute URL. */
+  image?: string;
+  /** Keep the page out of search results. */
+  noindex?: boolean;
+  /** POLARIS-7's line on this page: one sentence that fits it, in her mood of the day. */
+  pola: { mood: PolaMood; message: string };
+}
+
+const { title, description, image, noindex = false, pola } = Astro.props;
+
+const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const imageUrl = image ? new URL(image, Astro.site) : undefined;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    {noindex && <meta name="robots" content="noindex" />}
+
+    <!-- POLARIS-7's header mark. The PNG is for browsers without SVG favicons. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    {imageUrl && <meta property="og:image" content={imageUrl} />}
+    <meta name="twitter:card" content={imageUrl ? 'summary_large_image' : 'summary'} />
+
+    <Font cssVariable="--font-mono" preload />
+  </head>
+  <body class="baseLayout">
+    <Sky />
+    <a class="baseLayoutSkipLink" href="#main">skip to content</a>
+    <SiteHeader />
+    <main class="baseLayoutMain" id="main" tabindex="-1">
+      <slot />
+    </main>
+    <div class="baseLayoutPrompt">
+      <PromptLine mood={pola.mood} message={pola.message} />
+    </div>
+    <SiteFooter />
+    <VimKeys client:idle />
+  </body>
+</html>
+
+<style>
+  /* The header is sticky. Anything scrolled into view (a #link target, a focused element)
+     stops below it instead of underneath: its 24px padding twice plus one line of text. */
+  :global(html) {
+    scroll-padding-top: calc(2 * var(--space-6) + var(--space-8));
+  }
+
+  /* The vim statusline is fixed to the bottom of the window while it shows; the page gets
+     room for it so it never covers the footer. */
+  :global(html.vimStatuslineShown) .baseLayout {
+    padding-bottom: var(--size-statusline);
+  }
+
+  /* A stacking context of its own, so the sky (z-index -1) stays behind every page. */
+  .baseLayout {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Fills the space between header and prompt line, so the prompt line and footer sit at
+     the bottom even on a short page. */
+  .baseLayoutMain {
+    flex: 1;
+    /* A column, so a page can let its content grow into the free height (see the landing). */
+    display: flex;
+    flex-direction: column;
+  }
+
+  .baseLayoutPrompt {
+    margin: 0 var(--page-gutter);
+  }
+
+  /* Above the sticky header. */
+  .baseLayoutSkipLink {
+    position: absolute;
+    z-index: 2;
+    top: var(--space-2);
+    left: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-panel);
+    color: var(--color-text);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+    text-decoration: none;
+    transform: translateY(-200%);
+  }
+
+  .baseLayoutSkipLink:focus-visible {
+    transform: none;
+  }
+
+  /* Focus lands here from the skip link; the outline would only frame the whole page. */
+  .baseLayoutMain:focus {
+    outline: none;
+  }
+</style>

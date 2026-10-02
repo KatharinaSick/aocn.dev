@@ -1,0 +1,139 @@
+---
+// "add to calendar": a button that opens two ways to subscribe to /calendar.ics.
+//
+// - google calendar: Google's subscribe link. Google cannot open webcal:// links itself.
+// - apple · outlook · other: the webcal:// link, which most calendar apps subscribe to.
+//
+// Both subscribe rather than download, so changes reach everyone. A disclosure, not an
+// ARIA menu: the button says whether the list is open (aria-expanded), the list is plain
+// links in tab order, and Escape or a click outside closes it.
+//
+// Inside it, the arrow keys move between the options. The vim keys h j k l work here like
+// everywhere else (VimKeys.vue): j from the button lands on the first option.
+import Button from './Button.astro';
+
+interface Props {
+  id: string;
+  /** The toggle's look: an outlined button, or green text for quiet places. */
+  variant?: 'secondary' | 'text';
+}
+
+const { id, variant = 'secondary' } = Astro.props;
+
+const site = Astro.site ?? new URL('https://aocn.dev/');
+const feed = new URL('/calendar.ics', site);
+const webcal = `webcal://${feed.host}${feed.pathname}`;
+const google = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}`;
+const listId = `${id}-options`;
+---
+
+<div class="calendarMenu" data-calendar-menu>
+  <Button variant={variant} aria-expanded="false" aria-controls={listId} data-calendar-menu-toggle>
+    add to calendar
+    <svg class="calendarMenuChevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+      <path d="M2 4l4 4 4-4"></path>
+    </svg>
+  </Button>
+  <ul class="calendarMenuList" id={listId} hidden>
+    <li><a class="calendarMenuLink" href={google} target="_blank" rel="noopener">google calendar</a></li>
+    <li><a class="calendarMenuLink" href={webcal}>apple · outlook · other</a></li>
+  </ul>
+</div>
+
+<script>
+  for (const menu of document.querySelectorAll<HTMLElement>('[data-calendar-menu]')) {
+    const toggle = menu.querySelector<HTMLButtonElement>('[data-calendar-menu-toggle]')!;
+    const list = menu.querySelector<HTMLElement>('ul')!;
+
+    const setOpen = (open: boolean) => {
+      toggle.setAttribute('aria-expanded', String(open));
+      list.hidden = !open;
+    };
+
+    const isOpen = () => toggle.getAttribute('aria-expanded') === 'true';
+
+    toggle.addEventListener('click', () => setOpen(!isOpen()));
+
+    const links = () => [...list.querySelectorAll<HTMLAnchorElement>('a')];
+
+    // Moves focus through the button and the options, opening the list on the way down.
+    const move = (step: 1 | -1) => {
+      const stops = [toggle, ...links()];
+      const index = stops.indexOf(document.activeElement as HTMLAnchorElement);
+      const next = stops[Math.min(Math.max(index + step, 0), stops.length - 1)];
+      if (next !== toggle) setOpen(true);
+      next.focus();
+    };
+
+    menu.addEventListener('keydown', (event) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key === 'ArrowDown') move(1);
+      else if (event.key === 'ArrowUp') move(-1);
+      else if (event.key === 'Escape' && isOpen()) {
+        setOpen(false);
+        toggle.focus();
+      } else return;
+      // Handled here, so the page-wide vim keys leave it alone.
+      event.preventDefault();
+    });
+
+    // Close on a click anywhere else, or when focus leaves the menu (tabbing past it).
+    document.addEventListener('click', (event) => {
+      if (!menu.contains(event.target as Node)) setOpen(false);
+    });
+    menu.addEventListener('focusout', (event) => {
+      if (!menu.contains(event.relatedTarget as Node | null)) setOpen(false);
+    });
+  }
+</script>
+
+<style>
+  .calendarMenu {
+    position: relative;
+  }
+
+  .calendarMenuChevron {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+  }
+
+  /* The button lives in Button.astro, so its attribute is outside this component's scope. */
+  :global([aria-expanded='true']) .calendarMenuChevron {
+    transform: rotate(180deg);
+  }
+
+  .calendarMenuList {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    left: 0;
+    z-index: 1;
+    min-width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--color-line-strong);
+    background: var(--color-panel);
+    box-shadow: var(--shadow-overlay);
+  }
+
+  .calendarMenuList li + li {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .calendarMenuLink {
+    display: block;
+    padding: var(--space-3) var(--space-4);
+    color: var(--color-text);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .calendarMenuLink:hover {
+    color: var(--color-aurora);
+  }
+
+  .calendarMenuLink:focus-visible {
+    outline-offset: -2px;
+  }
+</style>
