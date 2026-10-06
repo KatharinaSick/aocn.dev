@@ -80,21 +80,23 @@ const curtainC = 'M 800 290 C 1000 340, 1220 400, 1560 440 L 1560 490 C 1220 450
     </defs>
   </svg>
 
-  <div class="skyAurora">
-    <svg class="skyLayer" width="1520" height="640" viewBox="0 0 1520 640">
-      <g filter="url(#skyGlow)" opacity="0.55">
-        <path d={curtainA} fill="url(#skyCurtainA)" />
-        <path d={curtainB} fill="url(#skyCurtainB)" />
-      </g>
-    </svg>
-    <div class="skyRays">
+  <div class="skyAuroraFrame">
+    <div class="skyAurora">
       <svg class="skyLayer" width="1520" height="640" viewBox="0 0 1520 640">
-        <g filter="url(#skyRays)">
+        <g filter="url(#skyGlow)" opacity="0.55">
           <path d={curtainA} fill="url(#skyCurtainA)" />
           <path d={curtainB} fill="url(#skyCurtainB)" />
-          <path d={curtainC} fill="url(#skyCurtainC)" opacity="0.55" />
         </g>
       </svg>
+      <div class="skyRays">
+        <svg class="skyLayer" width="1520" height="640" viewBox="0 0 1520 640">
+          <g filter="url(#skyRays)">
+            <path d={curtainA} fill="url(#skyCurtainA)" />
+            <path d={curtainB} fill="url(#skyCurtainB)" />
+            <path d={curtainC} fill="url(#skyCurtainC)" opacity="0.55" />
+          </g>
+        </svg>
+      </div>
     </div>
   </div>
 </div>
@@ -125,6 +127,21 @@ const curtainC = 'M 800 290 C 1000 340, 1220 400, 1560 440 L 1560 490 C 1220 450
 
   .skyDefs {
     position: absolute;
+  }
+
+  .skyAuroraFrame {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* The aurora's own fade is drawn in its 1520px coordinates, so a narrow screen sees only
+     its brightest right-hand end, right behind the text. Below 1024px a second fade, in
+     screen coordinates, keeps the glow off the text column (WCAG 1.4.3, 4.5:1). Measured
+     against the rendered pixels from 320 to 2560px wide. */
+  @media (max-width: 1023px) {
+    .skyAuroraFrame {
+      mask-image: linear-gradient(90deg, transparent 40%, #000 85%);
+    }
   }
 
   /* Anchored top right, as drawn on the 1440 frame: the curtains always enter from the right. */
