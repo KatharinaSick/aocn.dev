@@ -1,0 +1,31 @@
+import { defineConfig, devices } from '@playwright/test';
+
+// Accessibility tests against the production build. They need a browser, so they run on
+// pull requests (.github/workflows/web-ci.yml) rather than in `npm run build` — Netlify
+// would otherwise download Chromium on every deploy. See AGENTS.md → Testing.
+//
+// `*.e2e.ts` rather than `*.test.ts`, so vitest does not pick these files up.
+const port = 4799;
+
+export default defineConfig({
+  testDir: './e2e',
+  testMatch: '**/*.e2e.ts',
+  forbidOnly: !!process.env.CI,
+  reporter: process.env.CI ? [['github'], ['list']] : 'list',
+  use: {
+    baseURL: `http://localhost:${port}`,
+    // Lands in test-results/, which CI uploads when a test fails.
+    screenshot: 'only-on-failure',
+  },
+  // `astro preview` does not serve the Netlify adapter's output, so dist/ is served as
+  // plain static files. Only prerendered pages are tested; there is no on-demand page yet.
+  webServer: {
+    command: `serve dist --listen ${port} --no-request-logging`,
+    url: `http://localhost:${port}`,
+    reuseExistingServer: !process.env.CI,
+  },
+  projects: [
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
+    { name: 'mobile', use: { ...devices['Desktop Chrome'], viewport: { width: 375, height: 812 } } },
+  ],
+});

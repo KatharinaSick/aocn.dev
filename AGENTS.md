@@ -84,6 +84,10 @@ Not created yet. When it is added it follows the same stack as `KatharinaSick/cl
 - Layout and styling do not need tests.
 - Tests run in the build, so a broken invariant fails the deploy rather than reaching production:
   `npm run build` runs `astro check`, then `vitest run`, then `astro build`.
+- Accessibility is the one exception: it needs a browser, so it runs on pull requests
+  (`.github/workflows/web-ci.yml`) instead of in the build, where Netlify would download Chromium
+  on every deploy. `npm run test:a11y` (after `npm run build`) runs axe and a keyboard check on
+  every prerendered page in `dist/`, so a new page is covered without touching the test.
 - Logic with rules (the schedule, vim commands, focus movement, the calendar feed) lives in
   `web/src/lib/`, free of the DOM, so it can be tested. Components only carry it out.
 
