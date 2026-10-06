@@ -73,7 +73,7 @@ const surfaces: Token[] = [
 const texts: Token[] = [
   { name: 'text', usage: 'Primary text and headlines.' },
   { name: 'text-body', usage: 'Story paragraphs and step descriptions.' },
-  { name: 'text-soft', usage: 'The tagline and quieter supporting lines.' },
+  { name: 'text-soft', usage: 'The tagline and quieter supporting lines. Keep lines short near the aurora: across its bright band it drops below 4.5:1.' },
   { name: 'muted', usage: 'Meta, labels, $ command labels, dates.' },
   { name: 'dim', usage: 'Locked doors and faint hints. The lowest color allowed for text.' },
 ];
@@ -94,7 +94,7 @@ const typeStyles = [
   { name: 'countdown', sample: '63:14:22', bold: true, usage: 'The countdown digits only.' },
   { name: 'display', sample: 'advent of cloud native_', bold: true, usage: 'Home and landing headline, door titles.' },
   { name: 'title', sample: 'the story so far', bold: true, usage: 'Page titles, door numbers, every headline on mobile.' },
-  { name: 'lead', sample: '12 CNCF projects. 12 broken things. One very tired station AI.', bold: false, usage: 'One tagline per page, in text-soft.' },
+  { name: 'lead', sample: '12 CNCF projects. 12 broken things. One very tired station AI.', bold: false, usage: 'One tagline per page, in text-soft and at most 50ch wide, so it stays clear of the aurora.' },
   { name: 'body', sample: 'I have waited all year for this.', bold: false, usage: 'Logs, story text, ## headings, buttons, nav, inputs.' },
   { name: 'small', sample: '$ cat /etc/motd · dec 1 · 06:00 CET', bold: false, usage: '$ commands, meta, labels, dates, keycaps, statusline, footer.' },
   { name: 'wordmark', sample: 'POLARIS-7', bold: true, usage: 'Her name, in capitals, in the header and on her prompt line.' },
@@ -568,6 +568,7 @@ const colorGroups = [
   }
 
   .designSystemLead {
+    max-width: 50ch;
     margin-top: var(--space-3);
     color: var(--color-text-soft);
     font-size: var(--font-size-lead);
