@@ -3,7 +3,11 @@
 // in the middle, the supporter on the right. Everything stays muted; links are underlined.
 //
 // The vim keys hint is a button: it opens the ? help overlay, so the keys can be found,
-// and switched back on, without the keyboard.
+// and switched back on, without the keyboard. Touch screens do not get it: the keys need
+// a keyboard.
+//
+// On mobile two lines stack: the GitHub mark, spelled out, and the supporter. The domain is
+// the address bar's job there, and the vim keys hint goes with it.
 
 // The website repository for now. Once the challenges repository is public, this may
 // point to where all of the project's repositories are.
@@ -12,11 +16,10 @@ const GITHUB_URL = 'https://github.com/KatharinaSick/aocn.dev';
 
 <footer class="siteFooter">
   <span class="siteFooterLeft">
-    aocn.dev ·{' '}
-    <button class="siteFooterVim" type="button" data-vim-help>
-      <span class="siteFooterVimOn">press <span class="siteFooterKey">?</span> for vim keys</span>
-      <span class="siteFooterVimOff">vim keys are off</span>
-    </button>
+    aocn.dev<span class="siteFooterVimHint">{' '}·{' '}<button class="siteFooterVim" type="button" data-vim-help>
+        <span class="siteFooterVimOn">press <span class="siteFooterKey">?</span> for vim keys</span>
+        <span class="siteFooterVimOff">vim keys are off</span>
+      </button></span>
   </span>
   <a class="siteFooterGithub" href={GITHUB_URL} target="_blank" rel="noopener" aria-label="GitHub">
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -24,6 +27,7 @@ const GITHUB_URL = 'https://github.com/KatharinaSick/aocn.dev';
         d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"
       ></path>
     </svg>
+    <span class="siteFooterGithubLabel">GitHub</span>
   </a>
   <span class="siteFooterRight">
     supported with <span class="siteFooterHeart" aria-hidden="true">&lt;3</span><span class="srOnly">love</span> by{' '}
@@ -86,6 +90,11 @@ const GITHUB_URL = 'https://github.com/KatharinaSick/aocn.dev';
     fill: currentColor;
   }
 
+  /* Spelled out on mobile only, where the mark has no middle to stand in. */
+  .siteFooterGithubLabel {
+    display: none;
+  }
+
   .siteFooterGithub:hover,
   .siteFooterLink:hover {
     color: var(--color-text);
@@ -94,6 +103,37 @@ const GITHUB_URL = 'https://github.com/KatharinaSick/aocn.dev';
   /* Muted like the rest of the footer, underlined so it reads as a link. */
   .siteFooterLink {
     color: inherit;
+  }
+
+  /* No hover means a touch screen, where there is no keyboard for the vim keys. */
+  @media (hover: none) {
+    .siteFooterVimHint {
+      display: none;
+    }
+  }
+
+  /* Mobile: one column at the right edge, the GitHub mark spelled out and underlined like
+     every footer link. */
+  @media (max-width: 799px) {
+    .siteFooter {
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: end;
+      gap: var(--space-2);
+    }
+
+    .siteFooterLeft {
+      display: none;
+    }
+
+    .siteFooterGithub {
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .siteFooterGithubLabel {
+      display: inline;
+      text-decoration: underline;
+    }
   }
 
   /* A terminal heart, not an emoji: the site has none. */

@@ -98,4 +98,32 @@ const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
   .siteHeaderLink[aria-current='page'] {
     border-bottom: 1px solid var(--color-aurora);
   }
+
+  /* Mobile: her mark and name only, no subtitle, and the nav link is a full tap target. */
+  @media (max-width: 799px) {
+    .siteHeader {
+      padding-block: var(--space-4);
+    }
+
+    .siteHeaderName {
+      white-space: nowrap;
+    }
+
+    .siteHeaderSubtitle {
+      display: none;
+    }
+
+    .siteHeaderLink {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--size-touch);
+    }
+
+    /* A border would sit at the bottom of the 48px tap target, far below the word. */
+    .siteHeaderLink[aria-current='page'] {
+      border-bottom: none;
+      text-decoration: underline;
+      text-underline-offset: var(--space-1);
+    }
+  }
 </style>

@@ -20,14 +20,28 @@ interface Token {
   usage: string;
 }
 
-const tokenValues = new Map(
-  [...baseCss.matchAll(/--([a-z0-9-]+):\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()]),
-);
+// base.css defines every token once, then redefines a few below the mobile breakpoint.
+// Both halves are read separately, so the page shows the desktop and the mobile value.
+const MOBILE_QUERY = '@media (max-width: 799px)';
+const mobileStart = baseCss.indexOf(MOBILE_QUERY);
+if (mobileStart === -1) throw new Error(`design-system: base.css has no "${MOBILE_QUERY}" block`);
+
+function parseTokens(css: string): Map<string, string> {
+  return new Map([...css.matchAll(/--([a-z0-9-]+):\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()]));
+}
+
+const tokenValues = parseTokens(baseCss.slice(0, mobileStart));
+const mobileTokenValues = parseTokens(baseCss.slice(mobileStart));
 
 function value(name: string): string {
   const found = tokenValues.get(name);
   if (found === undefined) throw new Error(`design-system: --${name} is not defined in base.css`);
   return found;
+}
+
+// The token's mobile value, when it has one of its own.
+function mobileValue(name: string): string | undefined {
+  return mobileTokenValues.get(name);
 }
 
 // WCAG 2.x contrast ratio between two opaque hex colors.
@@ -94,13 +108,18 @@ function typeSpec(name: string, bold: boolean): string {
   return parts.join(' / ');
 }
 
+// Only the size is spelled out on mobile: a headline there takes title's whole style.
+function mobileTypeSpec(name: string): string | undefined {
+  return mobileValue(`font-size-${name}`);
+}
+
 const spacing: Token[] = [
   { name: 'space-1', usage: 'Icon to label, keycap to keycap.' },
   { name: 'space-2', usage: 'Inside rows; the mobile door grid gap.' },
   { name: 'space-3', usage: 'Related items; the desktop door grid gap.' },
   { name: 'space-4', usage: 'Card padding; the mobile page edge.' },
   { name: 'space-6', usage: 'Between blocks inside a section.' },
-  { name: 'space-8', usage: 'Between sections on mobile.' },
+  { name: 'space-8', usage: 'Between a section name and its text; small gaps between blocks.' },
   { name: 'space-12', usage: 'The desktop page edge and between sections.' },
 ];
 
@@ -111,8 +130,9 @@ const others: Token[] = [
   { name: 'glow-new', usage: 'The newly opened door. The only glow on a surface.' },
   { name: 'shadow-overlay', usage: 'Tooltips, the calendar menu and the ? overlay. Panels never get a shadow.' },
   { name: 'size-page', usage: 'The desktop design frame. Wider windows keep the content centred in a frame this wide.' },
-  { name: 'page-gutter', usage: 'Left and right page edge: space-12, more on wide windows so the content stays centred.' },
-  { name: 'size-control', usage: 'Button and input height on desktop.' },
+  { name: 'page-gutter', usage: 'Left and right page edge: space-12, more on wide windows so the content stays centred; space-4 on mobile.' },
+  { name: 'font-size-input', usage: 'Text typed into fields: body on desktop, 16px on mobile so iOS Safari does not zoom in.' },
+  { name: 'size-control', usage: 'Button and input height. On mobile the same as size-touch.' },
   { name: 'size-touch', usage: 'Minimum tap target on mobile.' },
   { name: 'size-statusline', usage: 'The vim statusline height.' },
   { name: 'size-door', usage: 'Desktop door cell (square). Mobile: 120px tall, three per row.' },
@@ -195,6 +215,7 @@ const colorGroups = [
             <div>
               <p class="designSystemSwatchName"><code>{style.name}</code></p>
               <p class="designSystemValue">{typeSpec(style.name, style.bold)}</p>
+              {mobileTypeSpec(style.name) && <p class="designSystemValue">mobile: {mobileTypeSpec(style.name)}</p>}
             </div>
             <div>
               <p
@@ -218,6 +239,14 @@ const colorGroups = [
     <section class="designSystemSection" aria-labelledby="ds-layout">
       <p class="designSystemCommand">$ ls tokens/layout</p>
       <h2 class="designSystemHeading" id="ds-layout">## spacing, radius, shadow & sizes</h2>
+      <p class="designSystemUsage">
+        One breakpoint: below 800px is mobile (<code>{MOBILE_QUERY}</code>). Phones and small tablets are mobile; an
+        iPad in portrait is desktop. A few tokens get their own mobile value there, shown as mobile: next to the
+        desktop one. Every other token is the same on both. Components and pages use the same query for their
+        mobile layout. A desktop layout that needs more room, like the man page's three columns, may also change
+        below 1024px, where the sky adds its fade. Touch screens are told apart by <code>(hover: none)</code>, not
+        by width.
+      </p>
 
       <div class="designSystemColumns">
         <table class="designSystemTable">
@@ -240,7 +269,10 @@ const colorGroups = [
             {others.map((token) => (
               <tr>
                 <th scope="row"><code>{token.name}</code></th>
-                <td class="designSystemValue">{value(token.name)}</td>
+                <td class="designSystemValue">
+                  {value(token.name)}
+                  {mobileValue(token.name) && <span class="designSystemMobileValue">mobile: {mobileValue(token.name)}</span>}
+                </td>
                 <td class="designSystemUsage">{token.usage}</td>
               </tr>
             ))}
@@ -325,6 +357,10 @@ const colorGroups = [
             time and brought up to date by a small script when the page loads. Before launch it counts up from last
             Christmas Eve, small and in <code>text-soft</code>, so the countdown stays the hero.
           </li>
+          <li>
+            On mobile it reads like a terminal: face and name on the first row, the &gt; under her face and the
+            sentence under her name. The incident counter is left out there.
+          </li>
         </ul>
       </div>
 
@@ -338,9 +374,17 @@ const colorGroups = [
             underlined.
           </li>
           <li>
+            On mobile the header drops <code>// station console</code>: her mark and name are enough. Every nav link
+            is a <code>size-touch</code> tap target.
+          </li>
+          <li>
             The footer is small and muted: the domain on the left, the GitHub mark in the middle, the supporter
             on the right. Its links are underlined but stay muted. The vim keys hint joins
             it with the keys.
+          </li>
+          <li>
+            On mobile it is two lines, aligned right: the GitHub mark with the word GitHub, then the supporter. The domain and the
+            vim keys hint are left out there. Touch screens never show the vim keys hint: the keys need a keyboard.
           </li>
         </ul>
       </div>
@@ -379,6 +423,7 @@ const colorGroups = [
             a click outside or tabbing past it closes the list. Arrow keys move between the options; the vim keys
             <code>h j k l</code> work here like everywhere else.
           </li>
+          <li>On mobile the list opens leftwards from the button's right edge, so it stays on screen.</li>
         </ul>
       </div>
 
@@ -395,6 +440,11 @@ const colorGroups = [
           <li>
             <code>quiet</code> is the man page version: an underlined field and the actions as green text with "or"
             between them and no note, so it reads as part of the page rather than a call to action. The landing page keeps the full version.
+          </li>
+          <li>
+            On mobile the field takes the whole width. The full version stacks <code>notify me</code> and the calendar
+            menu under it at full width; the quiet one keeps its actions as a line of text below. The quiet row also
+            wraps on desktop when the text column is narrow.
           </li>
           <li>The email field is the target of the <code>s</code> key. The email part does not send anything yet.</li>
         </ul>
@@ -479,6 +529,10 @@ const colorGroups = [
           <li>
             Until the script runs the digits show <code>--</code>, never numbers from the build. Under reduced motion
             the seconds are hidden and it updates once a minute. At zero it stops.
+          </li>
+          <li>
+            On mobile it stays one row with <code>space-2</code> gaps; <code>countdown</code> shrinks with the screen
+            below 364px, so it fits down to 320px.
           </li>
         </ul>
       </div>
@@ -679,6 +733,10 @@ const colorGroups = [
     background: var(--color-panel);
   }
 
+  .designSystemMobileValue {
+    display: block;
+  }
+
   .designSystemSpaceBar {
     height: var(--space-3);
     margin-top: var(--space-1);
@@ -687,5 +745,55 @@ const colorGroups = [
 
   code {
     font-family: inherit;
+  }
+
+  /* Mobile: every grid becomes one or two columns, and long values may break. */
+  @media (max-width: 799px) {
+    .designSystemSwatches {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .designSystemColumns,
+    .designSystemTypeRow {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .designSystemTypeRow {
+      gap: var(--space-2);
+      padding-inline: 0;
+    }
+
+    .designSystemTypeSample,
+    .designSystemValue {
+      overflow-wrap: anywhere;
+    }
+
+    /* The value goes under the name rather than breaking it. */
+    .designSystemSwatchName {
+      flex-wrap: wrap;
+    }
+
+    .designSystemFaces {
+      flex-wrap: wrap;
+    }
+
+    .designSystemRow :global(.textInput) {
+      width: 100%;
+    }
+
+    /* Each token becomes a small block: name, value, usage under each other. */
+    .designSystemTable tr,
+    .designSystemTable th,
+    .designSystemTable td {
+      display: block;
+    }
+
+    .designSystemTable tr {
+      padding: var(--space-2) 0;
+    }
+
+    .designSystemTable tr + tr {
+      border-top: 1px solid var(--color-line);
+    }
   }
 </style>

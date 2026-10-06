@@ -81,6 +81,13 @@ const imageUrl = image ? new URL(image, Astro.site) : undefined;
     scroll-padding-top: calc(2 * var(--space-6) + var(--space-8));
   }
 
+  /* On mobile its padding is space-4 and its tallest item the nav link's tap target. */
+  @media (max-width: 799px) {
+    :global(html) {
+      scroll-padding-top: calc(2 * var(--space-4) + var(--size-touch));
+    }
+  }
+
   /* The vim statusline is fixed to the bottom of the window while it shows; the page gets
      room for it so it never covers the footer. */
   :global(html.vimStatuslineShown) .baseLayout {

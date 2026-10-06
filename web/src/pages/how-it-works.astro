@@ -32,7 +32,7 @@ const glance = [
 >
   <div class="man">
     <p class="manRunningHead" aria-hidden="true">
-      <span>AOCN(1)</span><span>advent of cloud native manual</span><span>AOCN(1)</span>
+      <span>AOCN(1)</span><span class="manRunningHeadTitle">advent of cloud native manual</span><span>AOCN(1)</span>
     </p>
 
     <div class="manLayout">
@@ -308,5 +308,30 @@ const glance = [
   .manGlanceRow dd {
     margin: 0;
     color: var(--color-text);
+  }
+
+  /* Below 1024px there is no room for three columns (section names, text, at a glance), so
+     "at a glance" follows the page. 1024px is where the sky changes too. */
+  @media (max-width: 1023px) {
+    .manLayout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .manAside {
+      padding-top: 0;
+    }
+  }
+
+  /* Mobile: section names sit above their text. The running head keeps only its two
+     AOCN(1), as there is no room for the title. */
+  @media (max-width: 799px) {
+    .manRunningHeadTitle {
+      display: none;
+    }
+
+    .manSection {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-3);
+    }
   }
 </style>

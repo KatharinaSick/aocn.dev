@@ -105,6 +105,33 @@ const incidentCount = String(incidentDays(new Date())).padStart(2, '0');
     color: var(--color-text-soft);
   }
 
+  /* Mobile: two rows like a terminal, her face and name above, the > under her face on the
+     sentence's first line and the sentence under her name. No incident counter: there is
+     no room for it beside her, and below her it competes with her line. */
+  @media (max-width: 799px) {
+    .promptLineMessage {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: var(--space-1) var(--space-4);
+    }
+
+    .promptLinePrompt {
+      align-self: start;
+      justify-self: center;
+    }
+
+    /* Small, so it reads as the station's status line rather than more page content. */
+    .promptLinePrompt,
+    .promptLineText {
+      font-size: var(--font-size-small);
+      line-height: var(--line-height-small);
+    }
+
+    .promptLineIncidents {
+      display: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .promptLineCursor {
       animation: none;

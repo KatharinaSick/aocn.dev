@@ -53,13 +53,38 @@ const { id, quiet = false } = Astro.props;
     gap: var(--space-3);
   }
 
-  /* Text actions need a little more room between them than outlined buttons. */
+  /* Text actions need a little more room between them than outlined buttons. In running
+     text the row may be narrower than the field and the actions; they wrap below it. */
   .notifyRowQuiet .notifyRowControls {
+    flex-wrap: wrap;
     gap: var(--space-6);
   }
 
   .notifyRowOr {
     color: var(--color-text);
+  }
+
+  /* Mobile: the field takes the whole width. The full version stacks every control at full
+     width; the quiet one keeps "notify me or add to calendar" as a line of text below it. */
+  @media (max-width: 799px) {
+    .notifyRowControls :global(.textInput) {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .notifyRowQuiet .notifyRowControls :global(.textInput) {
+      flex-basis: 100%;
+    }
+
+    .notifyRow:not(.notifyRowQuiet) .notifyRowControls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .notifyRow:not(.notifyRowQuiet) .notifyRowControls :global(.button) {
+      justify-content: center;
+      width: 100%;
+    }
   }
 
   .notifyRowNote {
