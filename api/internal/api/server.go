@@ -33,7 +33,9 @@ func NewHandler(log app.Logger, subscriptions Subscriptions) http.Handler {
 func addRoutes(mux *http.ServeMux, log app.Logger, subscriptions Subscriptions) {
 	mux.Handle("GET /health", handleHealth())
 	mux.Handle("POST /subscribe", limitByIP(ipLimit, ipWindow)(handleSubscribe(log, subscriptions)))
-	mux.Handle("POST /subscribe/confirm", handleConfirmSubscription(log, subscriptions))
+	// Confirming is limited too: a valid token can be replayed until it expires, and
+	// every replay costs a database row and two Resend calls.
+	mux.Handle("POST /subscribe/confirm", limitByIP(ipLimit, ipWindow)(handleConfirmSubscription(log, subscriptions)))
 }
 
 // spanName labels spans by the matched route pattern (e.g. "GET /health"). When no

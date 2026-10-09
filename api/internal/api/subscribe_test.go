@@ -204,6 +204,28 @@ func TestSubscribeLimitsRequestsPerIP(t *testing.T) {
 	}
 }
 
+// A valid token can be replayed until it expires, and every replay costs a database row
+// and Resend calls, so confirming is limited per IP like subscribing.
+func TestConfirmLimitsRequestsPerIP(t *testing.T) {
+	m := &fakeMailer{}
+	h := newTestHandler(m)
+	body := `{"token":"` + signedToken("player@example.com", testNow.Add(time.Hour)) + `"}`
+
+	for i := range ipLimit {
+		if rec := post(h, "/subscribe/confirm", body, "203.0.113.1"); rec.Code != http.StatusNoContent {
+			t.Fatalf("request %d: status = %d, want %d", i+1, rec.Code, http.StatusNoContent)
+		}
+	}
+
+	rec := post(h, "/subscribe/confirm", body, "203.0.113.1")
+	if rec.Code != http.StatusTooManyRequests {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusTooManyRequests)
+	}
+	if len(m.added) != ipLimit {
+		t.Errorf("added %d times, want %d", len(m.added), ipLimit)
+	}
+}
+
 func TestMailerErrors(t *testing.T) {
 	cases := map[string]struct {
 		err  error
