@@ -15,6 +15,9 @@ type Fetch = typeof fetch;
 /**
  * Asks the API to send a confirmation link. `website` is the honeypot field: empty for
  * people, filled in by bots. The API answers "sent" either way, so a bot cannot tell.
+ *
+ * "sent" also comes back once an address has had its 3 confirmation emails for the day,
+ * although nothing goes out. Saying so would tell anyone which addresses were tried.
  */
 export async function requestSubscription(email: string, website: string, fetchFn: Fetch = fetch): Promise<RequestOutcome> {
   const status = await post(fetchFn, '/api/subscribe', { email, website });

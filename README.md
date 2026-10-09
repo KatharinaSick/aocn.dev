@@ -47,6 +47,22 @@ behind every page. Every page is prerendered.
 - **Nothing about a door's content** is in this repository before the door opens: no project names,
   no story beyond the premise, no solutions.
 
+## Email signup
+
+One email per door, double opt-in: `notify me` sends a confirmation link, and the address becomes a
+Resend contact in the doors segment only once that link is confirmed.
+
+- **Limits:** 3 confirmation emails per address per 24 hours (counted in Postgres) and 20 requests per
+  IP per hour. Bots get a honeypot field.
+- **The form says "sent" even when nothing was sent.** Past the per-address limit, or with the
+  honeypot filled in, the answer is the same as for a real send. A different answer would let
+  anyone find out which addresses were tried. Five clicks with one address mean three emails.
+- **Proof of consent:** every confirmation is a row in `subscribe_confirmations`. Who is subscribed
+  right now is Resend's to know.
+- **Unsubscribing** happens through Resend's link in the door emails, so every door email must
+  carry it (`{{{RESEND_UNSUBSCRIBE_URL}}}`). Until the first one on December 1 there is no link
+  yet: anyone who asks is removed by hand in Resend.
+
 ## Getting started
 
 Everything runs through [devbox](https://www.jetify.com/devbox), which pins Go, Node and OpenTofu so
