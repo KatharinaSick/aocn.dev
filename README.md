@@ -16,13 +16,13 @@ The challenges and the `aocn` CLI live in their own repositories.
 ## Status
 
 The website has its pre-launch pages: the landing page with the countdown to door 1, the
-`how it works` man page, a 404 page and a subscribable door calendar. The email signup is in the
-page but not wired up yet. The API serves only a health check, and there is no database yet. The
-full stack is written down in [AGENTS.md](AGENTS.md).
+`how it works` man page, a 404 page and a subscribable door calendar. The email signup works:
+it is double opt-in, confirmed subscribers are Resend contacts, and the API keeps the proof of
+each confirmation in Postgres (Neon). The full stack is written down in [AGENTS.md](AGENTS.md).
 
 ```
 web/    Astro site, deployed to Netlify
-api/    Go service, deployed to Cloud Run
+api/    Go service on Cloud Run: health check, email signup, Postgres migrations
 infra/  GCP platform, managed with OpenTofu
 ```
 
@@ -36,6 +36,7 @@ behind every page. Every page is prerendered.
 | `/` | Pre-launch landing: countdown to door 1, email signup, calendar subscription |
 | `/how-it-works` | The man page: what the calendar is, the premise, why it matters |
 | `/calendar.ics` | Every door opening as a subscribable calendar, built from the schedule |
+| `/subscribe/confirm` | Where the link in the confirmation email leads (`noindex`) |
 | `/design-system` | Every design token and component, rendered live (not linked, `noindex`) |
 | `404` | Not found, as a vim error |
 
@@ -54,16 +55,18 @@ nothing has to be installed globally. `gcloud` is the exception and stays a loca
 ```sh
 devbox shell
 npm install --prefix web
-devbox run web      # website on :4321
-devbox run api      # API on :8080
+devbox services up -b   # local Postgres on :54329
+devbox run web          # website on :4321
+devbox run api          # API on :8080, migrates the local database on start
 ```
 
 | Command | Description |
 |---|---|
 | `devbox run web` | Astro dev server |
-| `devbox run api` | Go API |
+| `devbox services up -b` | Local Postgres, in the background (`devbox services stop` to stop it) |
+| `devbox run api` | Go API in dev mode: emails are logged instead of sent, unless `RESEND_API_KEY` is set |
 | `devbox run build` | Production build of the website (type check, tests, build), and checks the API compiles |
-| `devbox run test` | Go tests and website tests |
+| `devbox run test` | Go tests (against the local Postgres) and website tests |
 | `npm test --prefix web` | Website tests only (Vitest) |
 | `npm run check --prefix web` | Website type check only |
 

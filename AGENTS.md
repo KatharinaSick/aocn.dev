@@ -68,9 +68,11 @@ than slow progress.
   translation layer.
 
 ## API Tech Stack
-Not created yet. When it is added it follows the same stack as `KatharinaSick/clubrizer`:
+Follows the same stack as `KatharinaSick/clubrizer`:
 - **Language**: Go.
-- **Database Driver**: pgx/v5 (PostgreSQL).
+- **Database**: PostgreSQL on Neon (free plan), pgx/v5. Migrations are golang-migrate, embedded in
+  the binary and run at startup, so the deploy identity never needs database credentials.
+- **Email**: Resend. Signup is double opt-in; subscribers are Resend contacts.
 - **Validation**: go-playground/validator.
 - **Authentication**: golang-jwt/jwt/v5. Login is GitHub OAuth only — no passwords, no email login.
 - **Configuration**: yaml.v3.

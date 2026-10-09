@@ -1,7 +1,9 @@
 package app
 
 import (
+	"errors"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -10,10 +12,36 @@ import (
 // Cloud Run always sets it.
 const defaultServerPort = "8080"
 
+const defaultSiteURL = "https://aocn.dev"
+
 type Config struct {
+	// Dev turns on stand-ins for local development: emails are logged instead of sent
+	// when there is no Resend key, and a random signing key is used when there is none.
+	// Only `devbox run api` sets it. Without it, missing secrets stop the API at startup,
+	// so a broken deploy cannot quietly accept signups that never send an email.
+	Dev bool `yaml:"dev"`
+
 	Server struct {
 		Port string `yaml:"port"`
 	} `yaml:"server"`
+
+	Site struct {
+		URL string `yaml:"url"`
+	} `yaml:"site"`
+
+	Database struct {
+		URL string `yaml:"url"`
+	} `yaml:"database"`
+
+	Resend struct {
+		APIKey      string `yaml:"apiKey"`
+		FromAddress string `yaml:"fromAddress"`
+		SegmentID   string `yaml:"segmentId"`
+	} `yaml:"resend"`
+
+	Subscribe struct {
+		SigningKey string `yaml:"signingKey"`
+	} `yaml:"subscribe"`
 }
 
 // ParseConfig reads ./config.yaml relative to the working directory, so the API must
@@ -33,6 +61,43 @@ func ParseConfig() (*Config, error) {
 	if cfg.Server.Port == "" {
 		cfg.Server.Port = defaultServerPort
 	}
+	if cfg.Site.URL == "" {
+		cfg.Site.URL = defaultSiteURL
+	}
+	cfg.Site.URL = strings.TrimSuffix(cfg.Site.URL, "/")
+
+	if err := cfg.validate(OnCloudRun()); err != nil {
+		return nil, err
+	}
 
 	return cfg, nil
+}
+
+func (c *Config) validate(onCloudRun bool) error {
+	// No stand-in for the database, not even in dev mode: `devbox run api` points at the
+	// local one.
+	if c.Database.URL == "" {
+		return errors.New("database.url is required")
+	}
+
+	if c.Dev {
+		if onCloudRun {
+			return errors.New("dev must not be set on Cloud Run")
+		}
+		if c.Resend.APIKey != "" && c.Resend.SegmentID == "" {
+			return errors.New("resend.segmentId is required when resend.apiKey is set")
+		}
+		return nil
+	}
+
+	if c.Resend.APIKey == "" || c.Resend.SegmentID == "" || c.Subscribe.SigningKey == "" {
+		return errors.New("resend.apiKey, resend.segmentId and subscribe.signingKey are required; set AOCN_DEV=true for local stand-ins")
+	}
+	return nil
+}
+
+// OnCloudRun reports whether the process runs as a Cloud Run service, which always
+// sets K_SERVICE.
+func OnCloudRun() bool {
+	return os.Getenv("K_SERVICE") != ""
 }

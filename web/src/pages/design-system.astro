@@ -446,7 +446,19 @@ const colorGroups = [
             menu under it at full width; the quiet one keeps its actions as a line of text below. The quiet row also
             wraps on desktop when the text column is narrow.
           </li>
-          <li>The email field is the target of the <code>s</code> key. The email part does not send anything yet.</li>
+          <li>The email field is the target of the <code>s</code> key.</li>
+          <li>
+            <code>notify me</code> is double opt-in: it only asks the API to email a confirmation link, and the page
+            that link opens (<code>/subscribe/confirm</code>) is where the address is confirmed. Submitting here sends a
+            real request.
+          </li>
+          <li>
+            The answer appears below the row as POLARIS-7's line, in <code>text-soft</code>; errors are vim-style
+            (<code>E: …</code>) in <code>error</code>, and the field gets <code>aria-invalid</code> when the address is
+            the problem. The line is a <code>role="status"</code> live region that exists from the start, so screen
+            readers announce it. The wording lives in <code>lib/subscribe.ts</code>, shared with the confirmation page.
+          </li>
+          <li>A hidden <code>website</code> field is a honeypot for bots. <code>visibility: hidden</code> keeps it from people, the keyboard and screen readers alike.</li>
         </ul>
       </div>
 

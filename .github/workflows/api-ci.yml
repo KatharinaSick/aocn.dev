@@ -18,6 +18,21 @@ jobs:
     permissions:
       contents: read
 
+    # The store's tests run against a real Postgres; without TEST_DATABASE_URL they
+    # skip. Same major version as Neon and devbox.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
     steps:
       - uses: actions/checkout@v7
 
@@ -29,8 +44,10 @@ jobs:
           cache-dependency-path: api/go.sum
 
       - name: Test
-        run: go test ./...
+        run: go test -race ./...
         working-directory: api
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
 
   image:
     name: Image

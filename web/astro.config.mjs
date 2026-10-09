@@ -15,6 +15,15 @@ export default defineConfig({
   adapter: isBuild ? netlify() : undefined,
   // Vue 3 islands for anything interactive; everything else stays plain Astro.
   integrations: [vue()],
+  // Locally, /api/* goes to the API from `devbox run api`, the way netlify.toml sends it
+  // to Cloud Run in production: same prefix, stripped before it reaches the API.
+  vite: {
+    server: {
+      proxy: {
+        '^/api/': { target: 'http://localhost:8080', rewrite: (path) => path.replace(/^\/api/, '') },
+      },
+    },
+  },
   // Self-hosted: Astro downloads the font files at build time and serves them from
   // aocn.dev, so no visitor request goes to a third-party font CDN.
   fonts: [

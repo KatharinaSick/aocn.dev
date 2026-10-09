@@ -1,0 +1,135 @@
+---
+// Where the link in the confirmation email leads. Prerendered: the token is read from
+// the query string in the browser, and only the button sends it to the API.
+//
+// A button rather than confirming on load, because mail scanners open every link in an
+// email: a page that subscribed when opened would subscribe people whose mail server
+// merely looked at it. Scanners do not click.
+import Button from '../../components/Button.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="confirm door emails"
+  description="Confirm that you want an email from Advent of Cloud Native whenever a door opens."
+  noindex
+  pola={{ mood: 'neutral', message: 'One more click. I need to know the inbox is yours.' }}
+>
+  <div class="confirmPage">
+    <p class="confirmPageCommand">$ subscribe --confirm</p>
+    <h1 class="confirmPageTitle">confirm door emails<span class="confirmPageUnderscore" aria-hidden="true">_</span></h1>
+    <p class="confirmPageText">
+      You asked me to email this address whenever a door opens. One email per door, nothing else.
+    </p>
+    <div class="confirmPageAction" data-confirm-action>
+      <Button variant="primary" data-confirm-button>confirm</Button>
+    </div>
+    <noscript><p class="confirmPageError">E: confirming needs JavaScript. Turn it on and reload this page.</p></noscript>
+    <p class="confirmPageStatus" role="status" data-confirm-status></p>
+    <p class="confirmPageBack">
+      <span class="confirmPagePrompt" aria-hidden="true">$ cd ~</span>
+      <a href="/">back home</a>
+    </p>
+  </div>
+</BaseLayout>
+
+<script>
+  import { CONFIRM_MESSAGES, confirmSubscription, tokenFromSearch } from '../../lib/subscribe';
+
+  // Hidden through its wrapper: the button's own display: inline-flex beats [hidden].
+  const action = document.querySelector<HTMLElement>('[data-confirm-action]')!;
+  const button = document.querySelector<HTMLButtonElement>('[data-confirm-button]')!;
+  const status = document.querySelector<HTMLElement>('[data-confirm-status]')!;
+  const token = tokenFromSearch(location.search);
+
+  const show = (key: keyof typeof CONFIRM_MESSAGES) => {
+    const message = CONFIRM_MESSAGES[key];
+    status.textContent = message.text;
+    status.classList.toggle('confirmPageError', message.isError);
+  };
+
+  if (!token) {
+    action.hidden = true;
+    show('missing');
+  }
+
+  button.addEventListener('click', async () => {
+    if (!token || button.disabled) return;
+
+    button.disabled = true;
+    status.textContent = 'Confirming.';
+    status.classList.remove('confirmPageError');
+    const outcome = await confirmSubscription(token);
+    show(outcome);
+
+    // Done or dead either way: the button has nothing left to do. Only a failure worth
+    // retrying leaves it there.
+    if (outcome === 'quota' || outcome === 'error') {
+      button.disabled = false;
+      return;
+    }
+    action.hidden = true;
+    // The token has done its job; keep it out of the history and of anything shared.
+    history.replaceState(null, '', location.pathname);
+  });
+</script>
+
+<style>
+  .confirmPage {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-12) var(--page-gutter);
+  }
+
+  .confirmPageCommand {
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+
+  .confirmPageTitle {
+    font-size: var(--font-size-display);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-display);
+    font-weight: var(--font-weight-bold);
+    overflow-wrap: anywhere;
+  }
+
+  .confirmPageUnderscore {
+    color: var(--color-aurora);
+  }
+
+  .confirmPageText {
+    max-width: 50ch;
+    color: var(--color-text-body);
+  }
+
+  .confirmPageAction {
+    margin-top: var(--space-3);
+  }
+
+  /* Empty until there is something to say. Out of the flow rather than hidden, so it
+     stays a live region screen readers already know about. */
+  .confirmPageStatus:empty {
+    position: absolute;
+  }
+
+  .confirmPageStatus {
+    color: var(--color-text-soft);
+    overflow-wrap: anywhere;
+  }
+
+  .confirmPageError {
+    color: var(--color-error);
+  }
+
+  .confirmPageBack {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+
+  .confirmPagePrompt {
+    color: var(--color-muted);
+  }
+</style>

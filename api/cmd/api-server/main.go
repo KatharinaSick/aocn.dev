@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"net"
 	"net/http"
@@ -12,6 +13,9 @@ import (
 
 	"github.com/katharinasick/aocn.dev/api/internal/api"
 	"github.com/katharinasick/aocn.dev/api/internal/app"
+	"github.com/katharinasick/aocn.dev/api/internal/db"
+	"github.com/katharinasick/aocn.dev/api/internal/email"
+	"github.com/katharinasick/aocn.dev/api/internal/subscribe"
 )
 
 // shutdownTimeout bounds how long in-flight requests and the final span export get
@@ -38,9 +42,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	pool, err := db.Connect(ctx, cfg.Database.URL)
+	if err != nil {
+		log.Error("Failed to connect to the database. Terminating.", "error", err)
+		flush(log, shutdownOTel)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort("", cfg.Server.Port),
-		Handler:      api.NewHandler(log),
+		Handler:      api.NewHandler(log, subscriptions(log, cfg, subscribe.NewStore(pool))),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
@@ -82,4 +94,26 @@ func flush(log app.Logger, shutdownOTel func(context.Context) error) {
 	if err := shutdownOTel(ctx); err != nil {
 		log.Error("Failed to flush telemetry", "error", err)
 	}
+}
+
+// subscriptions wires the signup to Resend. In dev mode, missing secrets are replaced
+// by stand-ins that let the flow be clicked through; ParseConfig has already refused
+// missing secrets everywhere else.
+func subscriptions(log app.Logger, cfg *app.Config, store api.Store) api.Subscriptions {
+	s := api.Subscriptions{Store: store, SiteURL: cfg.Site.URL, SigningKey: []byte(cfg.Subscribe.SigningKey)}
+
+	if cfg.Resend.APIKey != "" {
+		s.Mailer = email.NewClient(cfg.Resend.APIKey, cfg.Resend.FromAddress, cfg.Resend.SegmentID)
+	} else if cfg.Dev {
+		log.Warn("Dev mode without a Resend API key, logging emails instead of sending them")
+		s.Mailer = email.NewLogClient(log)
+	}
+
+	if len(s.SigningKey) == 0 && cfg.Dev {
+		log.Warn("Dev mode without a signing key, using a random one: confirmation links stop working on restart")
+		s.SigningKey = make([]byte, 32)
+		rand.Read(s.SigningKey) // never returns an error
+	}
+
+	return s
 }
