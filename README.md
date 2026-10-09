@@ -16,7 +16,7 @@ The challenges and the `aocn` CLI live in their own repositories.
 ## Status
 
 The website has its pre-launch pages: the landing page with the countdown to door 1, the
-`how it works` man page, a 404 page and a subscribable door calendar. The email signup works:
+`how it works` man page, a 404 page and the door calendar as an `.ics` file. The email signup works:
 it is double opt-in, confirmed subscribers are Resend contacts, and the API keeps the proof of
 each confirmation in Postgres (Neon). The full stack is written down in [AGENTS.md](AGENTS.md).
 
@@ -33,9 +33,9 @@ behind every page. Every page is prerendered.
 
 | Page | |
 |---|---|
-| `/` | Pre-launch landing: countdown to door 1, email signup, calendar subscription |
+| `/` | Pre-launch landing: countdown to door 1, email signup, add to calendar |
 | `/how-it-works` | The man page: what the calendar is, the premise, why it matters |
-| `/calendar.ics` | Every door opening as a subscribable calendar, built from the schedule |
+| `/calendar.ics` | Every door opening as a calendar file to import, built from the schedule |
 | `/subscribe/confirm` | Where the link in the confirmation email leads (`noindex`) |
 | `/design-system` | Every design token and component, rendered live (not linked, `noindex`) |
 | `404` | Not found, as a vim error |
@@ -46,6 +46,22 @@ behind every page. Every page is prerendered.
 - **Vim keys** work on every page (`?` lists them), with an off switch in the help overlay.
 - **Nothing about a door's content** is in this repository before the door opens: no project names,
   no story beyond the premise, no solutions.
+
+## Email signup
+
+One email per door, double opt-in: `notify me` sends a confirmation link, and the address becomes a
+Resend contact in the doors segment only once that link is confirmed.
+
+- **Limits:** 3 confirmation emails per address per 24 hours (counted in Postgres) and 20 requests per
+  IP per hour. Bots get a honeypot field.
+- **The form says "sent" even when nothing was sent.** Past the per-address limit, or with the
+  honeypot filled in, the answer is the same as for a real send. A different answer would let
+  anyone find out which addresses were tried. Five clicks with one address mean three emails.
+- **Proof of consent:** every confirmation is a row in `subscribe_confirmations`. Who is subscribed
+  right now is Resend's to know.
+- **Unsubscribing** happens through Resend's link in the door emails, so every door email must
+  carry it (`{{{RESEND_UNSUBSCRIBE_URL}}}`). Until the first one on December 1 there is no link
+  yet: anyone who asks is removed by hand in Resend.
 
 ## Getting started
 

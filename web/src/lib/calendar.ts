@@ -1,9 +1,11 @@
 /**
- * The door schedule as an iCalendar feed (RFC 5545), so people can subscribe and see
- * every door opening in their own calendar.
+ * The door schedule as an iCalendar file (RFC 5545), so people can import every door
+ * opening into their own calendar. The site links to it for import; anyone who adds the
+ * URL as a subscription by hand gets the same events.
  *
  * Every time comes from doors.ts. The events say nothing about what is behind a door.
- * UIDs are stable, so a subscribed calendar updates an event instead of duplicating it.
+ * UIDs are stable, so a subscribed calendar, or a second import, updates an event instead
+ * of duplicating it.
  */
 import { DOOR_COUNT, doorOpensAt } from './doors';
 

@@ -6,11 +6,15 @@
 // separated by "or", so it reads like part of the page rather than a call to action. It
 // leaves out the note, because the man page says the same in its text.
 //
+// "add to calendar" is the .ics file itself. Phones and desktop calendar apps offer to
+// import it; Google's and webcal:// subscribe links did nothing on Android, and the dates
+// do not change, so there is nothing a subscription would keep up to date. The link is
+// the target of the c key.
+//
 // "notify me" asks the API to email a confirmation link (double opt-in); the answer shows
 // below the row as POLARIS-7's line, errors vim-style. The page that link opens is
 // /subscribe/confirm. The field is the target of the s key.
 import Button from './Button.astro';
-import CalendarMenu from './CalendarMenu.astro';
 import TextInput from './TextInput.astro';
 
 interface Props {
@@ -46,7 +50,7 @@ const statusId = `${id}-status`;
       <Button type="submit" variant={quiet ? 'text' : 'primary'}>notify me</Button>
     </form>
     {quiet && <span class="notifyRowOr">or</span>}
-    <CalendarMenu id={`${id}-calendar`} variant={quiet ? 'text' : 'secondary'} />
+    <Button href="/calendar.ics" variant={quiet ? 'text' : 'secondary'} data-vim-calendar>add to calendar</Button>
   </div>
   <p class="notifyRowStatus" id={statusId} role="status" data-notify-status></p>
   {!quiet && <p class="notifyRowNote">one email per door · unsubscribe anytime</p>}
@@ -99,7 +103,7 @@ const statusId = `${id}-status`;
   }
 
   /* The form groups the field and its button for submitting, not for layout: they stay
-     items of the row, next to the calendar menu. */
+     items of the row, next to the calendar link. */
   .notifyRowForm {
     display: contents;
   }

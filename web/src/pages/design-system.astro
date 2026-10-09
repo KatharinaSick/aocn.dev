@@ -4,7 +4,6 @@
 // at build time, so this page cannot drift from the real tokens.
 import Countdown from '../components/Countdown.astro';
 import Button from '../components/Button.astro';
-import CalendarMenu from '../components/CalendarMenu.astro';
 import Keycap from '../components/Keycap.vue';
 import NotifyRow from '../components/NotifyRow.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
@@ -128,7 +127,7 @@ const others: Token[] = [
   { name: 'radius-screen', usage: "POLARIS-7's screen outline only." },
   { name: 'radius-dot', usage: 'Status dots: the new-door dot, the open ring, the online dot.' },
   { name: 'glow-new', usage: 'The newly opened door. The only glow on a surface.' },
-  { name: 'shadow-overlay', usage: 'Tooltips, the calendar menu and the ? overlay. Panels never get a shadow.' },
+  { name: 'shadow-overlay', usage: 'Tooltips and the ? overlay. Panels never get a shadow.' },
   { name: 'size-page', usage: 'The desktop design frame. Wider windows keep the content centred in a frame this wide.' },
   { name: 'page-gutter', usage: 'Left and right page edge: space-12, more on wide windows so the content stays centred; space-4 on mobile.' },
   { name: 'font-size-input', usage: 'Text typed into fields: body on desktop, 16px on mobile so iOS Safari does not zoom in.' },
@@ -390,10 +389,10 @@ const colorGroups = [
       </div>
 
       <div class="designSystemGroup">
-        <h3 class="designSystemGroupTitle">Button · variant</h3>
+        <h3 class="designSystemGroupTitle">Button · variant · href</h3>
         <div class="designSystemRow">
           <Button variant="primary">notify me</Button>
-          <Button>add to calendar</Button>
+          <Button href="/calendar.ics">add to calendar</Button>
           <Button variant="text">notify me</Button>
         </div>
         <ul class="designSystemRules">
@@ -406,24 +405,10 @@ const colorGroups = [
             The outline is <code>dim</code>, not <code>line-strong</code>: a control's edge needs 3:1 against the page,
             and <code>line-strong</code> is 1.7:1.
           </li>
-        </ul>
-      </div>
-
-      <div class="designSystemGroup">
-        <h3 class="designSystemGroupTitle">CalendarMenu · id</h3>
-        <CalendarMenu id="design-system-calendar" />
-        <ul class="designSystemRules">
           <li>
-            A secondary button that opens two ways to subscribe to <code>/calendar.ics</code>: Google's subscribe link,
-            and a <code>webcal://</code> link for Apple, Outlook and everything else. Both subscribe, so changes reach
-            everyone; nothing is downloaded once and forgotten.
+            With <code>href</code> it is a link with the same look, for actions that are a URL: <code>add to calendar</code>
+            is <code>/calendar.ics</code>.
           </li>
-          <li>
-            A disclosure, not an ARIA menu: <code>aria-expanded</code> on the button, plain links in tab order. Escape,
-            a click outside or tabbing past it closes the list. Arrow keys move between the options; the vim keys
-            <code>h j k l</code> work here like everywhere else.
-          </li>
-          <li>On mobile the list opens leftwards from the button's right edge, so it stays on screen.</li>
         </ul>
       </div>
 
@@ -433,7 +418,7 @@ const colorGroups = [
         <div class="designSystemSpaced"><NotifyRow id="design-system-notify-quiet" quiet /></div>
         <ul class="designSystemRules">
           <li>
-            The ways to stay in the loop in one row: the email field, <code>notify me</code> and the calendar menu, with
+            The ways to stay in the loop in one row: the email field, <code>notify me</code> and <code>add to calendar</code>, with
             the reassurance below. On the landing page and in the man page's STAYING IN THE LOOP; one component, so
             both work the same.
           </li>
@@ -442,11 +427,15 @@ const colorGroups = [
             between them and no note, so it reads as part of the page rather than a call to action. The landing page keeps the full version.
           </li>
           <li>
-            On mobile the field takes the whole width. The full version stacks <code>notify me</code> and the calendar
-            menu under it at full width; the quiet one keeps its actions as a line of text below. The quiet row also
+            On mobile the field takes the whole width. The full version stacks <code>notify me</code> and <code>add to
+            calendar</code> under it at full width; the quiet one keeps its actions as a line of text below. The quiet row also
             wraps on desktop when the text column is narrow.
           </li>
-          <li>The email field is the target of the <code>s</code> key.</li>
+          <li>The email field is the target of the <code>s</code> key, <code>add to calendar</code> of the <code>c</code> key.</li>
+          <li>
+            <code>add to calendar</code> is the <code>.ics</code> file itself: phones and desktop calendar apps offer to
+            import it. Subscribe links did nothing on Android, and the dates do not change.
+          </li>
           <li>
             <code>notify me</code> is double opt-in: it only asks the API to email a confirmation link, and the page
             that link opens (<code>/subscribe/confirm</code>) is where the address is confirmed. Submitting here sends a
