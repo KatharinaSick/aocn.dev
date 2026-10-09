@@ -12,15 +12,31 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
 
 const resendAPIURL = "https://api.resend.com"
 
-// ErrQuotaExceeded means Resend refused because a sending limit was reached: the free
+// ErrQuotaExceeded means Resend refused because a sending quota was used up: the free
 // plan allows 100 emails a day. The caller should ask the person to try again later.
 var ErrQuotaExceeded = errors.New("resend quota exceeded")
+
+// Resend answers 429 for two different things, told apart by the error's name: a used-up
+// quota, which lasts until the next day or month, and its per-second request limit (2 a
+// second by default), which is over almost before it is reported. Only the first is
+// worth telling the visitor about; the second is waited out and retried.
+const (
+	errNameDailyQuota   = "daily_quota_exceeded"
+	errNameMonthlyQuota = "monthly_quota_exceeded"
+
+	rateLimitRetries = 2
+	// How long to wait when Resend does not say, and the most to wait when it does,
+	// since a visitor is waiting on the answer.
+	defaultRetryWait = time.Second
+	maxRetryWait     = 2 * time.Second
+)
 
 var errNotFound = errors.New("not found")
 
@@ -182,40 +198,81 @@ func (c *Client) AddSubscriber(ctx context.Context, address string) error {
 
 // do performs one Resend API call, so the HTTP plumbing lives in one place.
 func (c *Client) do(ctx context.Context, method, path string, body any) error {
-	var reqBody io.Reader
+	var jsonBody []byte
 	if body != nil {
-		jsonBody, err := json.Marshal(body)
-		if err != nil {
+		var err error
+		if jsonBody, err = json.Marshal(body); err != nil {
 			return err
 		}
+	}
+
+	for attempt := 0; ; attempt++ {
+		wait, err := c.doOnce(ctx, method, path, jsonBody)
+		if wait == 0 || attempt == rateLimitRetries {
+			return err
+		}
+		select {
+		case <-time.After(wait):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+// doOnce performs a single attempt. A non-zero wait means Resend's per-second rate limit
+// was hit and the call may be retried after it.
+func (c *Client) doOnce(ctx context.Context, method, path string, jsonBody []byte) (time.Duration, error) {
+	var reqBody io.Reader
+	if jsonBody != nil {
 		reqBody = bytes.NewReader(jsonBody)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reqBody)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-	if body != nil {
+	if jsonBody != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer resp.Body.Close()
 
-	switch {
-	case resp.StatusCode == http.StatusNotFound:
-		return errNotFound
-	case resp.StatusCode == http.StatusTooManyRequests:
-		return ErrQuotaExceeded
-	case resp.StatusCode >= 400:
-		// Resend's error body names the problem; the status alone rarely does. The path
-		// is left out because it can contain the address, which does not belong in logs.
-		detail, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
-		return fmt.Errorf("resend %s returned %d: %s", method, resp.StatusCode, bytes.TrimSpace(detail))
+	if resp.StatusCode == http.StatusNotFound {
+		return 0, errNotFound
 	}
-	return nil
+	if resp.StatusCode < 400 {
+		return 0, nil
+	}
+
+	// Resend's error body names the problem; the status alone rarely does. The path
+	// is left out because it can contain the address, which does not belong in logs.
+	detail, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+	err = fmt.Errorf("resend %s returned %d: %s", method, resp.StatusCode, bytes.TrimSpace(detail))
+	if resp.StatusCode != http.StatusTooManyRequests {
+		return 0, err
+	}
+
+	var resendErr struct {
+		Name string `json:"name"`
+	}
+	json.Unmarshal(detail, &resendErr)
+	if resendErr.Name == errNameDailyQuota || resendErr.Name == errNameMonthlyQuota {
+		return 0, ErrQuotaExceeded
+	}
+	return retryWait(resp.Header.Get("Retry-After")), err
+}
+
+// retryWait reads a Retry-After header in seconds, capped at maxRetryWait.
+func retryWait(header string) time.Duration {
+	seconds, err := strconv.Atoi(header)
+	if err != nil || seconds < 0 {
+		return defaultRetryWait
+	}
+	// Retry-After: 0 still has to mean "retry", which a zero wait does not.
+	return min(max(time.Duration(seconds)*time.Second, time.Millisecond), maxRetryWait)
 }

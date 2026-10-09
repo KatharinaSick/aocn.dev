@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 type call struct {
@@ -105,12 +107,81 @@ func TestSendSubscribeConfirmation(t *testing.T) {
 	}
 }
 
+// tooManyRequests answers each call with the next of responses: a Resend 429 error name,
+// or "" for success. It reports how many calls arrived.
+func tooManyRequests(t *testing.T, responses ...string) (*Client, *int) {
+	t.Helper()
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		name := responses[min(calls, len(responses)-1)]
+		calls++
+		if name == "" {
+			return
+		}
+		w.Header().Set("Retry-After", "0")
+		w.WriteHeader(http.StatusTooManyRequests)
+		fmt.Fprintf(w, `{"statusCode":429,"name":%q,"message":"..."}`, name)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("re_test", "Advent of Cloud Native <noreply@aocn.dev>", "seg_1")
+	c.baseURL = srv.URL
+	return c, &calls
+}
+
 func TestQuotaErrors(t *testing.T) {
-	c, _ := fakeResend(t, map[string]int{"POST /emails": http.StatusTooManyRequests})
+	for _, name := range []string{"daily_quota_exceeded", "monthly_quota_exceeded"} {
+		t.Run(name, func(t *testing.T) {
+			c, calls := tooManyRequests(t, name)
+
+			err := c.SendSubscribeConfirmation(context.Background(), "player@example.com", "https://aocn.dev")
+			if !errors.Is(err, ErrQuotaExceeded) {
+				t.Errorf("err = %v, want %v", err, ErrQuotaExceeded)
+			}
+			if *calls != 1 {
+				t.Errorf("calls = %d, want 1: a used-up quota is not retried", *calls)
+			}
+		})
+	}
+}
+
+// The per-second rate limit is over in a moment, so it is retried rather than reported
+// as a used-up quota, which would tell the visitor to come back tomorrow.
+func TestRateLimitIsRetried(t *testing.T) {
+	c, calls := tooManyRequests(t, "rate_limit_exceeded", "")
+
+	if err := c.SendSubscribeConfirmation(context.Background(), "player@example.com", "https://aocn.dev"); err != nil {
+		t.Errorf("err = %v, want success on the retry", err)
+	}
+	if *calls != 2 {
+		t.Errorf("calls = %d, want 2", *calls)
+	}
+}
+
+func TestRateLimitGivesUpEventually(t *testing.T) {
+	c, calls := tooManyRequests(t, "rate_limit_exceeded")
 
 	err := c.SendSubscribeConfirmation(context.Background(), "player@example.com", "https://aocn.dev")
-	if !errors.Is(err, ErrQuotaExceeded) {
-		t.Errorf("err = %v, want %v", err, ErrQuotaExceeded)
+	if err == nil || errors.Is(err, ErrQuotaExceeded) {
+		t.Errorf("err = %v, want a plain error rather than %v", err, ErrQuotaExceeded)
+	}
+	if *calls != 1+rateLimitRetries {
+		t.Errorf("calls = %d, want %d", *calls, 1+rateLimitRetries)
+	}
+}
+
+func TestRetryWait(t *testing.T) {
+	cases := map[string]time.Duration{
+		"":    defaultRetryWait,
+		"x":   defaultRetryWait,
+		"0":   time.Millisecond,
+		"1":   time.Second,
+		"120": maxRetryWait,
+	}
+	for header, want := range cases {
+		if got := retryWait(header); got != want {
+			t.Errorf("retryWait(%q) = %v, want %v", header, got, want)
+		}
 	}
 }
 
