@@ -16,7 +16,7 @@ The challenges and the `aocn` CLI live in their own repositories.
 ## Status
 
 The website has its pre-launch pages: the landing page with the countdown to door 1, the
-`how it works` man page, a 404 page and a subscribable door calendar. The email signup works:
+`how it works` man page, a 404 page and the door calendar as an `.ics` file. The email signup works:
 it is double opt-in, confirmed subscribers are Resend contacts, and the API keeps the proof of
 each confirmation in Postgres (Neon). The full stack is written down in [AGENTS.md](AGENTS.md).
 
@@ -33,9 +33,9 @@ behind every page. Every page is prerendered.
 
 | Page | |
 |---|---|
-| `/` | Pre-launch landing: countdown to door 1, email signup, calendar subscription |
+| `/` | Pre-launch landing: countdown to door 1, email signup, add to calendar |
 | `/how-it-works` | The man page: what the calendar is, the premise, why it matters |
-| `/calendar.ics` | Every door opening as a subscribable calendar, built from the schedule |
+| `/calendar.ics` | Every door opening as a calendar file to import, built from the schedule |
 | `/subscribe/confirm` | Where the link in the confirmation email leads (`noindex`) |
 | `/design-system` | Every design token and component, rendered live (not linked, `noindex`) |
 | `404` | Not found, as a vim error |

@@ -10,7 +10,7 @@
 // - Single-key shortcuts can be switched off in the help overlay (WCAG 2.1.4). Off means
 //   off, ? included; the footer button still opens the overlay to switch them back on.
 // - Page-specific keys only exist where their target does: s needs [data-vim-subscribe],
-//   c needs [data-calendar-menu-toggle]. q (back home) is listed everywhere and simply does
+//   c needs [data-vim-calendar]. q (back home) is listed everywhere and simply does
 //   nothing on the home page.
 // - Screen readers hear messages through a live region; the statusline is visual only.
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
@@ -44,8 +44,8 @@ function isHome() {
   return window.location.pathname === '/';
 }
 
-function findCalendarToggle() {
-  return document.querySelector<HTMLElement>('[data-calendar-menu-toggle]');
+function findCalendar() {
+  return document.querySelector<HTMLElement>('[data-vim-calendar]');
 }
 
 const DIRECTIONS: Record<string, Direction> = { h: 'left', j: 'down', k: 'up', l: 'right' };
@@ -104,7 +104,7 @@ function setEnabled(value: boolean) {
 }
 
 function openHelp() {
-  pageKeys.value = { subscribe: findSubscribe() !== null, calendar: findCalendarToggle() !== null };
+  pageKeys.value = { subscribe: findSubscribe() !== null, calendar: findCalendar() !== null };
   help.value?.showModal();
 }
 
@@ -157,12 +157,9 @@ function onNormalKey(event: KeyboardEvent) {
       break;
     }
     case 'c': {
-      const toggle = findCalendarToggle();
-      if (!toggle) return;
-      if (toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
-      // Straight to the first option, so j k can choose right away.
-      const first = document.querySelector<HTMLElement>(`#${toggle.getAttribute('aria-controls')} a`);
-      (first ?? toggle).focus();
+      const calendar = findCalendar();
+      if (!calendar) return;
+      calendar.focus();
       break;
     }
     case 'h':

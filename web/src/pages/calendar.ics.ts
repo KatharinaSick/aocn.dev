@@ -1,4 +1,4 @@
-// The door schedule as a subscribable calendar, built into a static file at build time.
+// The door schedule as a calendar file to import, built into a static file at build time.
 import type { APIRoute } from 'astro';
 import { buildCalendar } from '../lib/calendar';
 
