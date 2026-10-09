@@ -1,0 +1,150 @@
+name: Deploy
+
+# Infra and the API in one workflow, so infra is always applied first: a change that
+# needs both (a new secret and the code that reads it) merges as one commit.
+#
+# A brand-new secret is the one exception that still takes two runs. OpenTofu creates
+# it empty, because anything it knows ends up in state, and Cloud Run will not start a
+# revision that reads a secret with no version. Fill in the value, then re-run the
+# failed jobs.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'infra/**'
+      - '.github/workflows/deploy.yml'
+
+# Two applies would fight over the state lock, two rollouts over which revision is
+# newest. Never cancel one in flight: a half-finished change is worse than a queued one.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  TOFU_VERSION: 1.12.5
+  REGION: europe-west1
+  SERVICE: aocn-api
+  REPOSITORY: aocn
+
+jobs:
+  # Runs on every deploy, not only when infra/ changed: with nothing to change, an
+  # apply is a no-op, and always running it is what guarantees the order.
+  infra:
+    name: Apply infra
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # to request the OIDC token for Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: ${{ env.TOFU_VERSION }}
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.SA_INFRA_APPLY }}
+
+      - name: Check formatting
+        run: tofu fmt -check -recursive
+        working-directory: infra
+
+      - name: Init
+        run: tofu init -input=false
+        working-directory: infra
+
+      - name: Validate
+        run: tofu validate
+        working-directory: infra
+
+      - name: Apply
+        run: tofu apply -input=false -auto-approve
+        working-directory: infra
+
+  # The pull request that led here already ran these. Running them again is what
+  # makes a broken main fail the deploy instead of reaching production.
+  test:
+    name: Test API
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    # Same as api-ci.yml: the store's tests need a real Postgres.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+
+      - name: Test
+        run: go test -race ./...
+        working-directory: api
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+
+  # Also runs when only infra/ changed. Rolling out the same code again is harmless,
+  # and keeping it unconditional keeps the workflow free of path-filtering logic.
+  api:
+    name: Deploy API
+    needs: [infra, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # to request the OIDC token for Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: google-github-actions/auth@v3
+        id: auth
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.SA_DEPLOYER }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Authenticate to Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      # Tagged with the commit, so a revision can always be traced back to the
+      # source it was built from.
+      - name: Build and push
+        id: image
+        env:
+          PROJECT: ${{ steps.auth.outputs.project_id }}
+        run: |
+          # The project comes from the identity we authenticated as. Fail loudly if
+          # that ever stops resolving, rather than pushing to a malformed path.
+          : "${PROJECT:?auth did not report a project_id}"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPOSITORY}/api:${GITHUB_SHA}"
+          docker build -t "$IMAGE" api
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      # update, not deploy: `gcloud run deploy` would create the service if it were
+      # missing, taking ownership away from OpenTofu. This fails instead.
+      - name: Roll out
+        run: |
+          gcloud run services update "$SERVICE" \
+            --region "$REGION" \
+            --image "${{ steps.image.outputs.image }}"

@@ -1,0 +1,219 @@
+/*
+ * Station Console — the design tokens of Advent of Cloud Native.
+ *
+ * This file is the whole scale. Every color, size, space, radius and shadow on the
+ * site comes from here; the /design-system page documents each one. Adding a value
+ * means deciding it belongs in the scale, not that one page needed it.
+ *
+ * The site is dark only: there is one theme, "station".
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ── Sky & surfaces ─────────────────────────────────────────────── */
+  --color-bg: #0a1114;
+  --color-sky-top: #050912;
+  --color-sky-mid: #07101a;
+  --color-panel: #0f191d;
+  --color-panel-glass: rgba(15, 25, 29, 0.72);
+  --color-panel-new: #0f1d1c;
+  --color-line: #1e2e33;
+  --color-line-strong: #2a4046;
+
+  /* ── Text ───────────────────────────────────────────────────────── */
+  --color-text: #d5e4df;
+  --color-text-body: #c2d4ce;
+  --color-text-soft: #a9bfb9;
+  --color-muted: #7f9a94;
+  /* The lowest color allowed for real text. */
+  --color-dim: #6f8984;
+  /* Redaction and decoration only. Never real text; always aria-hidden. */
+  --color-ghost: #2a4046;
+
+  /* ── Accents & moods ────────────────────────────────────────────── */
+  --color-aurora: #5ce6a8;
+  --color-aurora-bright: #7df5c0;
+  --color-signal: #f2b866;
+  --color-violet: #a99bff;
+  --color-warm: #ff9f8a;
+  --color-error: #ff8a7a;
+
+  /* ── Typography ─────────────────────────────────────────────────── */
+  /* --font-mono is defined by Astro's font loader (astro.config.mjs). */
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+
+  --font-size-countdown: 96px;
+  --line-height-countdown: 1;
+  --letter-spacing-countdown: -0.03em;
+
+  --font-size-display: 56px;
+  --line-height-display: 1.05;
+  --letter-spacing-display: -0.02em;
+
+  --font-size-title: 40px;
+  --line-height-title: 1.1;
+  --letter-spacing-title: -0.02em;
+
+  --font-size-lead: 17px;
+  --line-height-lead: 1.5;
+
+  --font-size-body: 14px;
+  --line-height-body: 1.7;
+
+  --font-size-small: 12px;
+  --line-height-small: 1.5;
+
+  --font-size-wordmark: 14px;
+  --line-height-wordmark: 1.4;
+  --letter-spacing-wordmark: 0.08em;
+
+  /* Text typed into fields. The same as body on desktop; see the mobile value below. */
+  --font-size-input: var(--font-size-body);
+
+  --font-size-caps: 12px;
+  --line-height-caps: 1.5;
+  --letter-spacing-caps: 0.18em;
+
+  /* ── Spacing ────────────────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* ── Radius ─────────────────────────────────────────────────────── */
+  /* The station has square corners. */
+  --radius-none: 0;
+  /* POLARIS-7's screen outline only. */
+  --radius-screen: 8px;
+  --radius-dot: 50%;
+
+  /* ── Shadows ────────────────────────────────────────────────────── */
+  /* The newly opened door. The only glow on a surface. */
+  --glow-new: 0 0 32px rgba(92, 230, 168, 0.25);
+  /* Tooltips, menus and overlays. Panels never get a shadow. */
+  --shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.45);
+
+  /* ── Sizes ──────────────────────────────────────────────────────── */
+  /* The desktop design frame. Wider windows keep the content in a centred frame this wide. */
+  --size-page: 1440px;
+  /* Left and right page edge: space-12, or more on windows wider than the frame so the
+     content stays centred. Backgrounds and borders still run the full width. */
+  --page-gutter: max(var(--space-12), calc((100% - var(--size-page)) / 2 + var(--space-12)));
+
+  --size-control: 46px;
+  --size-touch: 48px;
+  --size-statusline: 34px;
+  --size-door: 132px;
+
+  /* ── Opacity ────────────────────────────────────────────────────── */
+  --opacity-aurora: 0.5;
+  --opacity-aurora-finale: 0.85;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────── */
+/* The one breakpoint: below 800px is mobile. The desktop countdown needs about 800px, so
+   phones and small tablets get these values; an iPad in portrait keeps the desktop ones.
+   A media query cannot read a variable, so every component query repeats this number.
+   Only the tokens that change are redefined here; everything else is the same scale. */
+@media (max-width: 799px) {
+  :root {
+    --page-gutter: var(--space-4);
+
+    /* Controls are tap targets on mobile. */
+    --size-control: var(--size-touch);
+
+    /* 40px, and smaller below 364px so dd:hh:mm:ss stays one row down to a 320px screen. */
+    --font-size-countdown: min(40px, 11vw);
+
+    /* A tagline at 17px wraps to four lines on a phone and competes with the headline. */
+    --font-size-lead: var(--font-size-body);
+    --line-height-lead: var(--line-height-body);
+
+    /* iOS Safari zooms the page into any field under 16px when it is tapped. */
+    --font-size-input: 16px;
+
+    /* Every headline on mobile is title-sized. */
+    --font-size-display: var(--font-size-title);
+    --line-height-display: var(--line-height-title);
+    --letter-spacing-display: var(--letter-spacing-title);
+  }
+}
+
+/* ── Base ──────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  font-weight: var(--font-weight-regular);
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+}
+
+a {
+  color: var(--color-aurora);
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* The vim cursor: the one focus style on the site. */
+:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+/* Text only screen readers get, where the visual says it without words. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

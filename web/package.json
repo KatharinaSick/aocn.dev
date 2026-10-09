@@ -7,15 +7,28 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro check && vitest run && astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "test": "vitest run",
+    "check": "astro check",
+    "astro": "astro",
+    "test:a11y": "playwright test"
   },
   "dependencies": {
     "@astrojs/netlify": "^8.2.6",
-    "astro": "^7.3.5"
+    "@astrojs/vue": "^7.0.3",
+    "astro": "^7.3.5",
+    "vue": "^3.5.43"
   },
   "allowScripts": {
     "esbuild": true
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "serve": "^14.2.6",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
   }
 }

@@ -1,0 +1,129 @@
+---
+// The station console's header on every page: POLARIS-7's mark and name on the left,
+// the site navigation on the right.
+
+// "doors" joins in December, when there are doors. Until then the logo leads home.
+const links = [{ href: '/how-it-works', label: 'how it works' }];
+
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+---
+
+<header class="siteHeader">
+  <a class="siteHeaderBrand" href="/">
+    <!-- Her header mark, the same drawing as the favicon: her neutral face with the heavy
+         outline (the design's pola-mark has annoyed lids; we keep her neutral here, like on
+         the landing page). The name next to it says who she is. -->
+    <img class="siteHeaderMark" src="/favicon.svg" width="32" height="24" alt="" />
+    <span class="siteHeaderName">POLARIS-7</span>{' '}
+    <span class="siteHeaderSubtitle"><span aria-hidden="true">// </span>station console</span>
+  </a>
+
+  <nav class="siteHeaderNav" aria-label="main">
+    {links.map((link) => (
+      <a class="siteHeaderLink" href={link.href} aria-current={currentPath === link.href ? 'page' : undefined}>
+        {link.label}
+      </a>
+    ))}
+  </nav>
+</header>
+
+<script>
+  // See-through only while nothing is underneath: at the very top the sky shows behind
+  // the header as designed. Without this script the header simply stays solid.
+  const header = document.querySelector('.siteHeader');
+  const update = () => header?.classList.toggle('siteHeaderAtTop', window.scrollY <= 0);
+  update();
+  window.addEventListener('scroll', update, { passive: true });
+</script>
+
+<style>
+  /* Sticky and solid, so nothing shows through while the page scrolls underneath.
+     BaseLayout keeps focused elements clear of it. */
+  .siteHeader {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-panel);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-6) var(--page-gutter);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .siteHeaderAtTop {
+    background: transparent;
+  }
+
+  .siteHeaderBrand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  /* The favicon is drawn square; the mark itself is 4:3. */
+  .siteHeaderMark {
+    object-fit: cover;
+  }
+
+  .siteHeaderName {
+    font-size: var(--font-size-wordmark);
+    line-height: var(--line-height-wordmark);
+    letter-spacing: var(--letter-spacing-wordmark);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .siteHeaderSubtitle {
+    color: var(--color-muted);
+  }
+
+  .siteHeaderNav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+  }
+
+  .siteHeaderLink {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .siteHeaderLink:hover,
+  .siteHeaderLink[aria-current='page'] {
+    color: var(--color-aurora);
+  }
+
+  .siteHeaderLink[aria-current='page'] {
+    border-bottom: 1px solid var(--color-aurora);
+  }
+
+  /* Mobile: her mark and name only, no subtitle, and the nav link is a full tap target. */
+  @media (max-width: 799px) {
+    .siteHeader {
+      padding-block: var(--space-4);
+    }
+
+    .siteHeaderName {
+      white-space: nowrap;
+    }
+
+    .siteHeaderSubtitle {
+      display: none;
+    }
+
+    .siteHeaderLink {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--size-touch);
+    }
+
+    /* A border would sit at the bottom of the 48px tap target, far below the word. */
+    .siteHeaderLink[aria-current='page'] {
+      border-bottom: none;
+      text-decoration: underline;
+      text-underline-offset: var(--space-1);
+    }
+  }
+</style>

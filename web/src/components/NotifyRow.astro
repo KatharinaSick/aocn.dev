@@ -1,0 +1,175 @@
+---
+// The ways to stay in the loop, in one row: an email per door, or every door in your
+// calendar. Used on the landing page and in the man page's STAYING IN THE LOOP.
+//
+// `quiet` is the man page version: an underlined field and the actions as green text,
+// separated by "or", so it reads like part of the page rather than a call to action. It
+// leaves out the note, because the man page says the same in its text.
+//
+// "notify me" asks the API to email a confirmation link (double opt-in); the answer shows
+// below the row as POLARIS-7's line, errors vim-style. The page that link opens is
+// /subscribe/confirm. The field is the target of the s key.
+import Button from './Button.astro';
+import CalendarMenu from './CalendarMenu.astro';
+import TextInput from './TextInput.astro';
+
+interface Props {
+  /** Prefix for the ids inside, unique per page. */
+  id: string;
+  quiet?: boolean;
+}
+
+const { id, quiet = false } = Astro.props;
+const statusId = `${id}-status`;
+---
+
+<div class:list={['notifyRow', { notifyRowQuiet: quiet }]} data-notify-row>
+  <div class="notifyRowControls">
+    <form class="notifyRowForm" novalidate data-notify-form>
+      <TextInput
+        id={`${id}-email`}
+        label="email address"
+        type="email"
+        name="email"
+        autocomplete="email"
+        placeholder="you@example.com"
+        size={40}
+        underline={quiet}
+        aria-describedby={statusId}
+        data-vim-subscribe
+      />
+      <!-- A honeypot: bots fill in every field, people never see this one. -->
+      <div class="notifyRowTrap">
+        <label for={`${id}-website`}>website</label>
+        <input id={`${id}-website`} name="website" type="text" autocomplete="off" />
+      </div>
+      <Button type="submit" variant={quiet ? 'text' : 'primary'}>notify me</Button>
+    </form>
+    {quiet && <span class="notifyRowOr">or</span>}
+    <CalendarMenu id={`${id}-calendar`} variant={quiet ? 'text' : 'secondary'} />
+  </div>
+  <p class="notifyRowStatus" id={statusId} role="status" data-notify-status></p>
+  {!quiet && <p class="notifyRowNote">one email per door · unsubscribe anytime</p>}
+</div>
+
+<script>
+  import { REQUEST_MESSAGES, requestSubscription } from '../lib/subscribe';
+
+  for (const row of document.querySelectorAll<HTMLElement>('[data-notify-row]')) {
+    const form = row.querySelector<HTMLFormElement>('[data-notify-form]')!;
+    const email = form.querySelector<HTMLInputElement>('input[name="email"]')!;
+    const website = form.querySelector<HTMLInputElement>('input[name="website"]')!;
+    const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    const status = row.querySelector<HTMLElement>('[data-notify-status]')!;
+
+    const show = (key: keyof typeof REQUEST_MESSAGES) => {
+      const message = REQUEST_MESSAGES[key];
+      status.textContent = message.text;
+      status.classList.toggle('notifyRowStatusError', message.isError);
+      if (key === 'empty' || key === 'invalid') email.setAttribute('aria-invalid', 'true');
+      else email.removeAttribute('aria-invalid');
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (submit.disabled) return;
+
+      // The browser's own check first, so an obvious typo costs no request. The API
+      // checks again; this is only the quick answer.
+      const address = email.value.trim();
+      if (!address) return show('empty');
+      if (!email.checkValidity()) return show('invalid');
+
+      submit.disabled = true;
+      status.textContent = 'Sending.';
+      status.classList.remove('notifyRowStatusError');
+      const outcome = await requestSubscription(address, website.value);
+      submit.disabled = false;
+
+      show(outcome);
+      if (outcome === 'sent') email.value = '';
+    });
+  }
+</script>
+
+<style>
+  .notifyRow {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  /* The form groups the field and its button for submitting, not for layout: they stay
+     items of the row, next to the calendar menu. */
+  .notifyRowForm {
+    display: contents;
+  }
+
+  .notifyRowControls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  /* Text actions need a little more room between them than outlined buttons. In running
+     text the row may be narrower than the field and the actions; they wrap below it. */
+  .notifyRowQuiet .notifyRowControls {
+    flex-wrap: wrap;
+    gap: var(--space-6);
+  }
+
+  .notifyRowOr {
+    color: var(--color-text);
+  }
+
+  /* Mobile: the field takes the whole width. The full version stacks every control at full
+     width; the quiet one keeps "notify me or add to calendar" as a line of text below it. */
+  @media (max-width: 799px) {
+    .notifyRowControls :global(.textInput) {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .notifyRowQuiet .notifyRowControls :global(.textInput) {
+      flex-basis: 100%;
+    }
+
+    .notifyRow:not(.notifyRowQuiet) .notifyRowControls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .notifyRow:not(.notifyRowQuiet) .notifyRowControls :global(.button) {
+      justify-content: center;
+      width: 100%;
+    }
+  }
+
+  /* Invisible, out of the flow, and through visibility: hidden also out of the tab order
+     and the accessibility tree, so no person can fill it in. */
+  .notifyRowTrap {
+    position: absolute;
+    visibility: hidden;
+  }
+
+  /* Empty until there is something to say. Taken out of the flow rather than hidden,
+     so it takes no room but stays a live region screen readers already know about:
+     one that appears together with its first message is often not announced. */
+  .notifyRowStatus:empty {
+    position: absolute;
+  }
+
+  .notifyRowStatus {
+    color: var(--color-text-soft);
+    overflow-wrap: anywhere;
+  }
+
+  .notifyRowStatusError {
+    color: var(--color-error);
+  }
+
+  .notifyRowNote {
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+</style>

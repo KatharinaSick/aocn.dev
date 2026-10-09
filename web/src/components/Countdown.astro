@@ -1,0 +1,159 @@
+---
+// The countdown to a door: days : hours : min : sec in the countdown type style, the hero of the page.
+//
+// Screen readers get one sentence that does not change ("Door 01 opens on December 1 at
+// 06:00 CET."); the ticking digits are visual only, so nothing is announced every
+// second. The page is prerendered, so the digits show "--" until the script fills them
+// in, rather than numbers from the build. Under reduced motion the seconds are hidden and
+// the rest updates once a minute. At zero it stops.
+import { doorOpensAt, formatStationTime, formatStationTimeLong } from '../lib/doors';
+
+interface Props {
+  door: number;
+}
+
+const { door } = Astro.props;
+const number = String(door).padStart(2, '0');
+const opensAt = doorOpensAt(door);
+
+const units = [
+  { key: 'days', label: 'days' },
+  { key: 'hours', label: 'hours' },
+  { key: 'minutes', label: 'min' },
+  { key: 'seconds', label: 'sec' },
+];
+---
+
+<div class="countdown" data-countdown={opensAt.toISOString()}>
+  <p class="countdownLabel" aria-hidden="true">
+    &gt; door {number} opens {formatStationTime(opensAt)}<span class="countdownLocal" data-countdown-local></span>
+  </p>
+  <p class="srOnly">
+    Door {number} opens on {formatStationTimeLong(opensAt)}<span data-countdown-local-long></span>.
+  </p>
+  <div class="countdownDigits" aria-hidden="true">
+    {units.map((unit, index) => (
+      <Fragment>
+        {index > 0 && <span class:list={['countdownColon', { countdownSeconds: unit.key === 'seconds' }]}>:</span>}
+        <div class:list={['countdownUnit', { countdownSeconds: unit.key === 'seconds' }]}>
+          <span class="countdownValue" data-countdown-unit={unit.key}>--</span>
+          <span class="countdownUnitLabel">{unit.label}</span>
+        </div>
+      </Fragment>
+    ))}
+  </div>
+</div>
+
+<script>
+  import { STATION_TIME_ZONE } from '../lib/doors';
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pad = (value: number) => String(value).padStart(2, '0');
+
+  for (const countdown of document.querySelectorAll<HTMLElement>('[data-countdown]')) {
+    const opensAt = new Date(countdown.dataset.countdown ?? '');
+    const value = (key: string) => countdown.querySelector(`[data-countdown-unit="${key}"]`);
+
+    // Add the visitor's own time when it is not CET.
+    const local = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const station = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: STATION_TIME_ZONE });
+    if (local.format(opensAt) !== station.format(opensAt)) {
+      const yourTime = local.format(opensAt).toLowerCase();
+      countdown.querySelector('[data-countdown-local]')!.textContent = `${yourTime} your time`;
+      countdown.querySelector('[data-countdown-local-long]')!.textContent = `, ${yourTime} your time`;
+    }
+
+    const tick = () => {
+      const left = Math.max(0, opensAt.getTime() - Date.now());
+      const seconds = Math.floor(left / 1000);
+      value('days')!.textContent = pad(Math.floor(seconds / 86400));
+      value('hours')!.textContent = pad(Math.floor(seconds / 3600) % 24);
+      value('minutes')!.textContent = pad(Math.floor(seconds / 60) % 60);
+      value('seconds')!.textContent = pad(seconds % 60);
+      if (left === 0) return;
+      // Wake up on the next full second (or minute), so the digits do not drift.
+      const step = reducedMotion ? 60_000 : 1000;
+      setTimeout(tick, step - (Date.now() % step));
+    };
+    tick();
+  }
+</script>
+
+<style>
+  .countdown {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .countdownLabel {
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+
+  /* Empty in CET, where there is no other time to show. */
+  .countdownLocal:not(:empty)::before {
+    content: ' · ';
+  }
+
+  .countdownDigits {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .countdownUnit {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .countdownValue,
+  .countdownColon {
+    font-size: var(--font-size-countdown);
+    line-height: var(--line-height-countdown);
+    letter-spacing: var(--letter-spacing-countdown);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .countdownValue {
+    color: var(--color-text);
+  }
+
+  .countdownSeconds .countdownValue {
+    color: var(--color-aurora);
+  }
+
+  /* Decorative, so ghost is allowed here. */
+  .countdownColon {
+    color: var(--color-ghost);
+  }
+
+  .countdownUnitLabel {
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+
+  /* One row on mobile too: the digits shrink with the countdown token, the gaps here. */
+  @media (max-width: 799px) {
+    .countdownDigits {
+      gap: var(--space-2);
+    }
+
+    /* On its own line: wrapped onto the first one, its end ran over the aurora. */
+    .countdownLocal:not(:empty) {
+      display: block;
+    }
+
+    .countdownLocal:not(:empty)::before {
+      content: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .countdownSeconds {
+      display: none;
+    }
+  }
+</style>

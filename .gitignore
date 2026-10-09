@@ -6,6 +6,10 @@ dist/
 .astro/
 .netlify/
 
+# Playwright
+web/test-results/
+web/playwright-report/
+
 # Environment
 .env
 .env.local
@@ -43,3 +47,5 @@ logfile
 # Logs
 *.log
 npm-debug.log*
+
+tmp

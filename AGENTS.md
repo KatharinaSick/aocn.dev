@@ -8,7 +8,7 @@ from something running and broken; players fix them and verify against a live cl
 `aocn` CLI. Points decay with each verification attempt and over time, so players can catch up at
 any point.
 
-The whole calendar tells one story: Pola, the dry AI of an Arctic research station, spends December
+The whole calendar tells one story: POLARIS-7, the dry AI of an Arctic research station, spends December
 watching a stranded crew break everything on her cluster. Players are the station's new engineer.
 
 This repository is the website. The challenges live in their own public repository and the `aocn`
@@ -41,8 +41,10 @@ than slow progress.
 ## General Guidelines
 - **Audience**: End users are developers and platform engineers. Technical language is fine, but the
   calendar should stay playful — it is a game, not documentation.
-- **Pola's voice**: Any in-story text is Pola speaking: dry, understated, faintly exasperated with
+- **POLARIS-7's voice**: Any in-story text is POLARIS-7 speaking: dry, understated, faintly exasperated with
   the crew, never cutesy and never cruel. She states facts and lets them land. Keep her logs short.
+- **Her name**: Always write POLARIS-7, on the site and in this repository. The crew's nickname
+  for her is saved for December; do not use it anywhere before then.
 - **Spoilers**: Never put challenge solutions, or hints specific enough to substitute for solving,
   into this repository. It is public.
 - **Full-stack security**: Always think about the full picture — this project has a website, an API
@@ -56,18 +58,21 @@ than slow progress.
   `chore:`, `docs:`).
 
 ## Website Tech Stack
-Decided, not yet implemented — nothing in this repository is built yet.
-- **Framework**: Astro 7, with Vue 3 islands for anything interactive.
-- **Language**: TypeScript.
+- **Framework**: Astro 7, with Vue 3 islands for anything interactive (`@astrojs/vue`).
+- **Language**: TypeScript, checked with `astro check`.
+- **Tests**: Vitest, next to the code they test (`*.test.ts`).
 - **Deployment**: Netlify, via `@astrojs/netlify`.
-- **Content**: Astro content collections (`web/src/content/`).
+- **Font**: JetBrains Mono, self-hosted through Astro's `fonts` config. No third-party font CDN.
+- **Content**: Astro content collections (`web/src/content/`), once door content arrives.
 - **No i18n**: The site is English only. Do not add vue-i18n, Astro's i18n routing, or any
   translation layer.
 
 ## API Tech Stack
-Not created yet. When it is added it follows the same stack as `KatharinaSick/clubrizer`:
+Follows the same stack as `KatharinaSick/clubrizer`:
 - **Language**: Go.
-- **Database Driver**: pgx/v5 (PostgreSQL).
+- **Database**: PostgreSQL on Neon (free plan), pgx/v5. Migrations are golang-migrate, embedded in
+  the binary and run at startup, so the deploy identity never needs database credentials.
+- **Email**: Resend. Signup is double opt-in; subscribers are Resend contacts.
 - **Validation**: go-playground/validator.
 - **Authentication**: golang-jwt/jwt/v5. Login is GitHub OAuth only — no passwords, no email login.
 - **Configuration**: yaml.v3.
@@ -79,7 +84,15 @@ Not created yet. When it is added it follows the same stack as `KatharinaSick/cl
   once it is public.
 - Scoring, points decay and anything the `aocn` CLI submits are in the same category when they arrive.
 - Layout and styling do not need tests.
-- Tests run in the build, so a broken invariant fails the deploy rather than reaching production.
+- Tests run in the build, so a broken invariant fails the deploy rather than reaching production:
+  `npm run build` runs `astro check`, then `vitest run`, then `astro build`.
+- Accessibility is the one exception: it needs a browser, so it runs on pull requests
+  (`.github/workflows/web-ci.yml`) instead of in the build, where Netlify would download Chromium
+  on every deploy. `npm run test:a11y` (after `npm run build`) runs axe, a keyboard check and a
+  contrast check against the real sky (aurora at its worst, 320–1440px) on every prerendered
+  page in `dist/`, so a new page is covered without touching the test.
+- Logic with rules (the schedule, vim commands, focus movement, the calendar feed) lives in
+  `web/src/lib/`, free of the DOM, so it can be tested. Components only carry it out.
 
 ## Coding Conventions
 
@@ -106,6 +119,14 @@ Not created yet. When it is added it follows the same stack as `KatharinaSick/cl
 - **Dev server**: `astro dev` blocks the terminal. Agents should start it with
   `astro dev --background` and manage it with `astro dev stop`, `astro dev status` and
   `astro dev logs`. `devbox run web` stays foreground, which is what a human wants.
+  The dev server sometimes keeps serving a component's old styles after an edit. If a style
+  change does not show up, check the production build (`npm run build`) before debugging the
+  code, and restart the dev server.
+- **External links**: Every link to another site opens in a new tab: `target="_blank"` with
+  `rel="noopener"` (plus `sponsored` for the supporter). Links within aocn.dev stay in the tab.
+- **Whitespace in templates**: Astro drops the space at a line break next to a tag, so
+  `a\n<code>b</code>` renders as "ab". Keep inline elements on the same line as the words around
+  them, or add an explicit `{' '}`. Check rendered text, not just the source.
 
 ### Rendering
 - Pages are prerendered by default. A page that depends on per-request data sets

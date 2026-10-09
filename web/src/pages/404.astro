@@ -1,0 +1,75 @@
+---
+// Not found, as a vim error. Netlify serves this for every path without a page.
+//
+// Door gating: a door that has not opened yet must answer with exactly this page, so
+// nothing tells a visitor whether the door exists.
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="not found"
+  description="This page does not exist."
+  noindex
+  pola={{ mood: 'annoyed', message: 'That file does not exist. Neither does the last flight out.' }}
+>
+  <div class="notFound">
+    <p class="notFoundCommand">$ vim <span data-not-found-path>this-page</span></p>
+    <h1 class="notFoundTitle">not found<span class="notFoundUnderscore" aria-hidden="true">_</span></h1>
+    <p class="notFoundError">E484: Can't open file <span data-not-found-path>this-page</span></p>
+    <p class="notFoundBack">
+      <span class="notFoundPrompt" aria-hidden="true">$ cd ~</span>
+      <a href="/">back home</a>
+    </p>
+  </div>
+</BaseLayout>
+
+<script>
+  // The page is prerendered, so only the browser knows which path was asked for.
+  let path = location.pathname;
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    // A malformed escape like /%E0: show the path as it was typed.
+  }
+  for (const element of document.querySelectorAll('[data-not-found-path]')) element.textContent = path;
+</script>
+
+<style>
+  .notFound {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-12) var(--page-gutter);
+  }
+
+  .notFoundCommand {
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+
+  .notFoundTitle {
+    font-size: var(--font-size-display);
+    line-height: var(--line-height-display);
+    letter-spacing: var(--letter-spacing-display);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .notFoundUnderscore {
+    color: var(--color-aurora);
+  }
+
+  .notFoundError {
+    margin-top: var(--space-3);
+    color: var(--color-error);
+    overflow-wrap: anywhere;
+  }
+
+  .notFoundBack {
+    display: flex;
+    gap: var(--space-3);
+  }
+
+  .notFoundPrompt {
+    color: var(--color-muted);
+  }
+</style>

@@ -1,4 +1,30 @@
+# Local stand-ins for missing secrets. Set only by `devbox run api`; refused on Cloud
+# Run. Without it, the API does not start unless every secret below is set.
+dev: ${AOCN_DEV}
+
 server:
   # Cloud Run injects PORT and expects the service to listen on it. Empty locally,
   # where app.ParseConfig falls back to 8080.
   port: ${PORT}
+
+site:
+  # Where links in emails point. Empty falls back to https://aocn.dev; set
+  # SITE_URL=http://localhost:4321 to click a confirmation link through locally.
+  url: ${SITE_URL}
+
+database:
+  # From Secret Manager on Cloud Run (Neon). `devbox run api` sets it to the local
+  # Postgres from `devbox services up`.
+  url: ${DATABASE_URL}
+
+resend:
+  # Keep empty to log emails instead of sending them.
+  apiKey: ${RESEND_API_KEY}
+  # The name says where the email comes from; POLARIS-7 speaks in the text. Mail apps
+  # cut names off after about 20 characters, so there is no room for both.
+  fromAddress: Advent of Cloud Native <noreply@aocn.dev>
+  segmentId: 27aa930d-002c-4773-be29-d99460833e6a
+
+subscribe:
+  # Signs the link in the confirmation email.
+  signingKey: ${SUBSCRIBE_SIGNING_KEY}

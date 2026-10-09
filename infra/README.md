@@ -25,6 +25,17 @@ Authentication is Application Default Credentials: `gcloud auth application-defa
   ```sh
   printf '%s' 'Authorization=Api-Token dt0c01.XXXX' \
     | gcloud secrets versions add dynatrace-otlp-token --data-file=-
+
+  # Neon's connection string for the project, from its dashboard.
+  printf '%s' 'postgresql://USER:PASSWORD@HOST/DB?sslmode=require' \
+    | gcloud secrets versions add database-url --data-file=-
+
+  printf '%s' 're_XXXX' \
+    | gcloud secrets versions add resend-api-key --data-file=-
+
+  # Any random value works; rotating it invalidates confirmation links not yet clicked.
+  openssl rand -base64 32 | tr -d '\n' \
+    | gcloud secrets versions add subscribe-signing-key --data-file=-
   ```
 
 ## Bootstrapping
@@ -78,6 +89,14 @@ repository and the workflows name no particular environment.
 gh variable set WIF_PROVIDER   --body "$(tofu output -raw wif_provider)"
 gh variable set SA_INFRA_PLAN  --body "$(tofu output -raw infra_plan_service_account)"
 gh variable set SA_INFRA_APPLY --body "$(tofu output -raw infra_apply_service_account)"
+gh variable set SA_DEPLOYER    --body "$(tofu output -raw deployer_service_account)"
 ```
 
-`deployer_service_account` gets the same treatment once the deploy workflow exists.
+## Deploying
+
+`.github/workflows/deploy.yml` runs on every push to `main` that touches `api/` or `infra/`: it
+applies this configuration first, then rolls out the API. One merge carries a change that needs
+both.
+
+A brand-new secret takes two runs: the first creates it empty and fails when Cloud Run cannot read
+a value. Fill it in as above, then re-run the failed jobs.

@@ -3,14 +3,24 @@
   "packages": [
     "go@1.27",
     "nodejs@24",
-    "opentofu@1.12.5"
+    "opentofu@1.12.5",
+    "postgresql@17"
   ],
+  "env": {
+    "PGHOST": "/tmp/aocn-postgres",
+    "PGPORT": "54329",
+    "PGUSER": "postgres"
+  },
   "shell": {
+    "init_hook": [
+      "mkdir -p \"$PGHOST\"",
+      "[ -f \"$PGDATA/PG_VERSION\" ] || initdb --username=postgres --auth=trust --encoding=UTF8 --locale=C --no-instructions > /dev/null"
+    ],
     "scripts": {
-      "api":   "go run -C api ./cmd/api-server",
+      "api":   "AOCN_DEV=true DATABASE_URL=\"postgres://postgres@/postgres?host=$PGHOST&port=$PGPORT\" go run -C api ./cmd/api-server",
       "web":   "npm run dev --prefix web",
       "build": "npm run build --prefix web && go build -C api -o /dev/null ./cmd/api-server",
-      "test":  "go -C api test ./..."
+      "test":  "TEST_DATABASE_URL=\"postgres://postgres@/postgres?host=$PGHOST&port=$PGPORT\" go -C api test ./... && npm test --prefix web"
     }
   }
 }

@@ -11,7 +11,13 @@ locals {
   ]
 
   secrets = [
+    # The Neon connection string, password included.
+    "database-url",
     "dynatrace-otlp-token",
+    "resend-api-key",
+    # Signs the link in the subscribe confirmation email, so an address is only added
+    # by someone who can read its inbox.
+    "subscribe-signing-key",
   ]
 }
 
@@ -323,6 +329,27 @@ resource "google_cloud_run_v2_service" "api" {
       # Replaced by the first deploy. ignore_changes below is what stops every later
       # apply from putting it back.
       image = "us-docker.pkg.dev/cloudrun/container/hello"
+
+      # Secrets reach the API as environment variables, which config.yaml expands.
+      # "latest" is resolved when a revision starts, so a new secret version takes
+      # effect with the next deploy, not before.
+      dynamic "env" {
+        for_each = {
+          DATABASE_URL          = "database-url"
+          RESEND_API_KEY        = "resend-api-key"
+          SUBSCRIBE_SIGNING_KEY = "subscribe-signing-key"
+        }
+
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.secrets[env.value].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
     }
   }
 
@@ -330,7 +357,11 @@ resource "google_cloud_run_v2_service" "api" {
     ignore_changes = [template[0].containers[0].image]
   }
 
-  depends_on = [google_project_service.enabled]
+  # A revision that reads secrets only starts once the runtime account may read them.
+  depends_on = [
+    google_project_service.enabled,
+    google_secret_manager_secret_iam_member.api_runtime_reads,
+  ]
 }
 
 # Public, because the Netlify proxy forwards anonymous visitors and there is no
