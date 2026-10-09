@@ -22,7 +22,7 @@ full stack is written down in [AGENTS.md](AGENTS.md).
 
 ```
 web/    Astro site, deployed to Netlify
-api/    Go service (health endpoint only)
+api/    Go service, deployed to Cloud Run
 infra/  GCP platform, managed with OpenTofu
 ```
 
@@ -62,7 +62,7 @@ devbox run api      # API on :8080
 |---|---|
 | `devbox run web` | Astro dev server |
 | `devbox run api` | Go API |
-| `devbox run build` | Production build of the website: type check, tests, then the build |
+| `devbox run build` | Production build of the website (type check, tests, build), and checks the API compiles |
 | `devbox run test` | Go tests and website tests |
 | `npm test --prefix web` | Website tests only (Vitest) |
 | `npm run check --prefix web` | Website type check only |
@@ -81,13 +81,11 @@ devbox run api
 
 ## Deployment
 
-The website deploys to Netlify from `web/`. Build settings live in `netlify.toml` at the repository
-root rather than in the Netlify UI, so a site can be connected or recreated without dashboard setup.
-
-`aocn.dev` is the canonical domain; `adventofcloudnative.dev` is attached to the same site and
-redirects to it.
+Both halves deploy from `main`, and neither is configured in a dashboard. The website goes to Netlify
+from `web/`, where `aocn.dev` is canonical and `adventofcloudnative.dev` redirects to it. The API runs
+on Cloud Run, and `netlify.toml` proxies `/api/*` to it so the browser only ever talks to `aocn.dev`.
 
 A failing website test or type error fails `npm run build`, and so the Netlify deploy: a broken
 schedule never reaches production.
 
-This README grows as things land: the API and the database get documented once they actually exist.
+[infra/](infra/README.md) describes the platform underneath.
