@@ -16,6 +16,10 @@ export default defineConfig({
     baseURL: `http://localhost:${port}`,
     // Lands in test-results/, which CI uploads when a test fails.
     screenshot: 'only-on-failure',
+    // The countdown adds the visitor's own time outside CET, so the text on the page
+    // depends on the timezone. Pinned, so CI and a laptop in Vienna test the same page,
+    // and pinned outside CET, so that longer text is the one tested.
+    timezoneId: 'America/Los_Angeles',
   },
   // `astro preview` does not serve the Netlify adapter's output, so dist/ is served as
   // plain static files. Only prerendered pages are tested; there is no on-demand page yet.
