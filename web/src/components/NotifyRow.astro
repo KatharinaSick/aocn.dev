@@ -4,7 +4,8 @@
 //
 // `quiet` is the man page version: an underlined field and the actions as green text,
 // separated by "or", so it reads like part of the page rather than a call to action. It
-// leaves out the note, because the man page says the same in its text.
+// leaves out the note, because the man page says the same in its text. The note links the
+// privacy policy, so it is at hand where the address is asked for.
 //
 // "add to calendar" is the .ics file itself. Phones and desktop calendar apps offer to
 // import it; Google's and webcal:// subscribe links did nothing on Android, and the dates
@@ -53,7 +54,13 @@ const statusId = `${id}-status`;
     <Button href="/calendar.ics" variant={quiet ? 'text' : 'secondary'} data-vim-calendar>add to calendar</Button>
   </div>
   <p class="notifyRowStatus" id={statusId} role="status" data-notify-status></p>
-  {!quiet && <p class="notifyRowNote">one email per door · unsubscribe anytime</p>}
+  {
+    !quiet && (
+      <p class="notifyRowNote">
+        one email per door · unsubscribe anytime · <a class="notifyRowNoteLink" href="/privacy">privacy</a>
+      </p>
+    )
+  }
 </div>
 
 <script>
@@ -175,5 +182,15 @@ const statusId = `${id}-status`;
     color: var(--color-muted);
     font-size: var(--font-size-small);
     line-height: var(--line-height-small);
+  }
+
+  /* Muted and underlined, like the footer's links: there to be found, not to compete with
+     the buttons above. */
+  .notifyRowNoteLink {
+    color: inherit;
+  }
+
+  .notifyRowNoteLink:hover {
+    color: var(--color-text);
   }
 </style>

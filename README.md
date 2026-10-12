@@ -36,6 +36,8 @@ behind every page. Every page is prerendered.
 | `/` | Pre-launch landing: countdown to door 1, email signup, add to calendar |
 | `/how-it-works` | The man page: what the calendar is, the premise, why it matters |
 | `/calendar.ics` | Every door opening as a calendar file to import, built from the schedule |
+| `/privacy` | What the site does with data (GDPR) |
+| `/imprint` | Who is behind the site (§ 25 MedienG) |
 | `/subscribe/confirm` | Where the link in the confirmation email leads (`noindex`) |
 | `/design-system` | Every design token and component, rendered live (not linked, `noindex`) |
 | `404` | Not found, as a vim error |

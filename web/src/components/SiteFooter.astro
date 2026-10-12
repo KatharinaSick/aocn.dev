@@ -1,13 +1,13 @@
 ---
-// The footer on every page: the domain and the vim keys hint on the left, the GitHub mark
+// The footer on every page: the domain, privacy, imprint and the vim keys hint on the left, the GitHub mark
 // in the middle, the supporter on the right. Everything stays muted; links are underlined.
 //
 // The vim keys hint is a button: it opens the ? help overlay, so the keys can be found,
 // and switched back on, without the keyboard. Touch screens do not get it: the keys need
 // a keyboard.
 //
-// On mobile two lines stack: the GitHub mark, spelled out, and the supporter. The domain is
-// the address bar's job there, and the vim keys hint goes with it.
+// On mobile three lines stack: the GitHub mark, spelled out, the supporter, then privacy and
+// imprint. The domain is the address bar's job there, and the vim keys hint goes with it.
 
 // The website repository for now. Once the challenges repository is public, this may
 // point to where all of the project's repositories are.
@@ -16,7 +16,7 @@ const GITHUB_URL = 'https://github.com/KatharinaSick/aocn.dev';
 
 <footer class="siteFooter">
   <span class="siteFooterLeft">
-    aocn.dev<span class="siteFooterVimHint">{' '}·{' '}<button class="siteFooterVim" type="button" data-vim-help>
+    <span class="siteFooterDomain">aocn.dev ·{' '}</span><a class="siteFooterLink" href="/privacy">privacy</a>{' '}·{' '}<a class="siteFooterLink" href="/imprint">imprint</a><span class="siteFooterVimHint">{' '}·{' '}<button class="siteFooterVim" type="button" data-vim-help>
         <span class="siteFooterVimOn">press <span class="siteFooterKey">?</span> for vim keys</span>
         <span class="siteFooterVimOff">vim keys are off</span>
       </button></span>
@@ -121,8 +121,13 @@ const GITHUB_URL = 'https://github.com/KatharinaSick/aocn.dev';
       gap: var(--space-2);
     }
 
-    .siteFooterLeft {
+    .siteFooterDomain,
+    .siteFooterVimHint {
       display: none;
+    }
+
+    .siteFooterLeft {
+      order: 1;
     }
 
     .siteFooterGithub {

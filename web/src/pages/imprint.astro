@@ -1,0 +1,31 @@
+---
+// The imprint: the disclosure every Austrian website needs (§ 25 MedienG). Name and place
+// of residence, no street address.
+//
+// Open question: with Dynatrace credited as supporter, the site may count as commercial,
+// and § 5 ECG would then ask for a full postal address. That is for Dynatrace legal to
+// answer; the address must not be Katharina's home.
+import TextPage from '../components/TextPage.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { CONTACT_EMAIL } from '../lib/contact';
+---
+
+<BaseLayout
+  title="imprint"
+  description="Who is behind aocn.dev."
+  pola={{ mood: 'neutral', message: 'Someone has to be responsible. It is not me.' }}
+>
+  <TextPage command="$ cat imprint.txt" title="imprint">
+    <p>
+      Katharina Sick<br />
+      Linz, Austria<br />
+      <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+    </p>
+    <p>
+      Owner and publisher of aocn.dev (§ 25 MedienG). aocn.dev is a personal project about Advent of Cloud Native, a
+      cloud native advent calendar. Supported by{' '}
+      <a href="https://www.dynatrace.com" target="_blank" rel="sponsored noopener">Dynatrace</a>.
+    </p>
+    <p>How this site handles your data: <a href="/privacy">privacy</a>.</p>
+  </TextPage>
+</BaseLayout>
