@@ -12,10 +12,12 @@
     "test": "vitest run",
     "check": "astro check",
     "astro": "astro",
-    "test:a11y": "playwright test"
+    "test:a11y": "playwright test",
+    "social-image": "node scripts/social-image.ts"
   },
   "dependencies": {
     "@astrojs/netlify": "^8.2.6",
+    "@astrojs/sitemap": "^3.7.4",
     "@astrojs/vue": "^7.0.3",
     "astro": "^7.3.5",
     "vue": "^3.5.43"

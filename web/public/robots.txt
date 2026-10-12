@@ -1,0 +1,6 @@
+# Everything on aocn.dev may be crawled. Pages that should stay out of search results say
+# so themselves with noindex, which a crawler can only read if it is allowed in.
+User-agent: *
+Disallow: /api/
+
+Sitemap: https://aocn.dev/sitemap-index.xml

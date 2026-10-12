@@ -18,19 +18,27 @@ interface Props {
   title?: string;
   /** Meta and social preview description. Every page sets its own. */
   description: string;
-  /** Social preview image, as a path under public/ or an absolute URL. */
-  image?: string;
+  /**
+   * Social preview image, 1200 × 630, as a path under public/ or an absolute URL. Defaults
+   * to the site's own (scripts/social-image.ts draws it).
+   */
+  image?: { src: string; alt: string };
   /** Keep the page out of search results. */
   noindex?: boolean;
   /** POLARIS-7's line on this page: one sentence that fits it, in her mood of the day. */
   pola: { mood: PolaMood; message: string };
 }
 
-const { title, description, image, noindex = false, pola } = Astro.props;
+const DEFAULT_IMAGE = {
+  src: '/social.png',
+  alt: 'advent of cloud native: 12 CNCF projects, 12 broken things, one very tired station AI. POLARIS-7 under the aurora.',
+};
+
+const { title, description, image = DEFAULT_IMAGE, noindex = false, pola } = Astro.props;
 
 const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
-const imageUrl = image ? new URL(image, Astro.site) : undefined;
+const imageUrl = new URL(image.src, Astro.site);
 ---
 
 <!doctype html>
@@ -43,6 +51,8 @@ const imageUrl = image ? new URL(image, Astro.site) : undefined;
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
     {noindex && <meta name="robots" content="noindex" />}
+    <!-- Browser chrome in the station's background color (--color-bg; a meta tag cannot read a token). -->
+    <meta name="theme-color" content="#0a1114" />
 
     <!-- POLARIS-7's header mark. The PNG is for browsers without SVG favicons. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -54,8 +64,16 @@ const imageUrl = image ? new URL(image, Astro.site) : undefined;
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
-    {imageUrl && <meta property="og:image" content={imageUrl} />}
-    <meta name="twitter:card" content={imageUrl ? 'summary_large_image' : 'summary'} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={imageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={image.alt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image:alt" content={image.alt} />
+
+    <!-- Page-specific head content, such as the landing page's structured data. -->
+    <slot name="head" />
 
     <Font cssVariable="--font-mono" preload />
 

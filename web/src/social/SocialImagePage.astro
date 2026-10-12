@@ -1,0 +1,93 @@
+---
+// The social preview image, as a page: what a shared aocn.dev link shows. Served under
+// `astro dev` only (astro.config.mjs); scripts/social-image.ts screenshots it into
+// public/social.png.
+//
+// Laid out at 600 × 315 and captured at 2×, so the 1200 × 630 image keeps the site's
+// type scale instead of a second, bigger one.
+import { Font } from 'astro:assets';
+import PolaFace from '../components/PolaFace.astro';
+import Sky from '../components/Sky.astro';
+import { DOOR_COUNT, doorOpensAt, formatStationDay } from '../lib/doors';
+import '../styles/base.css';
+
+const schedule = `${DOOR_COUNT} doors · ${formatStationDay(doorOpensAt(1))} -> ${formatStationDay(doorOpensAt(DOOR_COUNT))} · aocn.dev`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <title>social image</title>
+    <Font cssVariable="--font-mono" preload />
+  </head>
+  <body class="socialImage">
+    <Sky />
+    <div class="socialImageText">
+      <p class="socialImageCommand">$ cat /etc/motd</p>
+      <h1 class="socialImageTitle">advent of<br />cloud native<span class="socialImageUnderscore">_</span></h1>
+      <p class="socialImageLead">12 CNCF projects. 12 broken things. One very tired station AI.</p>
+      <p class="socialImageSchedule">{schedule}</p>
+    </div>
+    <div class="socialImageFace">
+      <PolaFace mood="neutral" size="large" />
+    </div>
+  </body>
+</html>
+
+<style>
+  .socialImage {
+    position: relative;
+    isolation: isolate;
+    width: 600px;
+    height: 315px;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-8);
+    /* The finale's aurora: a preview is small, the site's quieter one barely shows. */
+    --opacity-aurora: var(--opacity-aurora-finale);
+  }
+
+  .socialImageText {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .socialImageCommand,
+  .socialImageSchedule {
+    color: var(--color-muted);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+  }
+
+  .socialImageTitle {
+    font-size: var(--font-size-title);
+    line-height: var(--line-height-title);
+    letter-spacing: var(--letter-spacing-title);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .socialImageUnderscore {
+    color: var(--color-aurora);
+  }
+
+  .socialImageLead {
+    max-width: 34ch;
+    color: var(--color-text-soft);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+  }
+
+  .socialImageSchedule {
+    margin-top: var(--space-2);
+  }
+
+  /* Still: a screenshot could catch her mid-blink. */
+  .socialImageFace :global(.polaFaceEyes) {
+    animation: none;
+  }
+</style>

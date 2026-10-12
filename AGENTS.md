@@ -116,6 +116,10 @@ Follows the same stack as `KatharinaSick/clubrizer`:
   date anywhere else.
 - **SEO**: Every page sets its own title, description and social image through `BaseLayout`. The
   landing page and the profile pages are what get shared — treat their previews as a feature.
+  The default social image, `public/social.png`, is drawn from `src/social/SocialImagePage.astro`
+  (served under `astro dev` only); run `npm run social-image` after changing that page. A page
+  with `noindex` must also be listed in `noindexPaths` in `astro.config.mjs`, which keeps it
+  out of the sitemap.
 - **Dev server**: `astro dev` blocks the terminal. Agents should start it with
   `astro dev --background` and manage it with `astro dev stop`, `astro dev status` and
   `astro dev logs`. `devbox run web` stays foreground, which is what a human wants.

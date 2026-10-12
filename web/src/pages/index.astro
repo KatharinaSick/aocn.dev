@@ -11,6 +11,10 @@ import {
   formatStationDay,
   formatStationDayLong,
 } from '../lib/doors';
+import { landingStructuredData, toJsonLd } from '../lib/structuredData';
+
+const description = 'A cloud native advent calendar. 12 CNCF projects. 12 broken things. One very tired station AI.';
+const structuredData = toJsonLd(landingStructuredData(description, new URL('/social.png', Astro.site).href));
 
 const firstDoor = doorOpensAt(1);
 const lastDoor = doorOpensAt(DOOR_COUNT);
@@ -21,9 +25,10 @@ const scheduleSentence = `${DOOR_COUNT} doors, one every other day from ${format
 ---
 
 <BaseLayout
-  description="A cloud native advent calendar. 12 CNCF projects. 12 broken things. One very tired station AI."
+  description={description}
   pola={{ mood: 'neutral', message: 'The aurora, a quiet cluster and me. I have waited all year for this.' }}
 >
+  <script slot="head" type="application/ld+json" set:html={structuredData} />
   <!-- Fades the lower edge of the aurora out below the hero. -->
   <div class="landingFade" aria-hidden="true"></div>
 
