@@ -13,14 +13,14 @@ const LIST_DELETED_BY = 'January 31, 2027';
 
 <BaseLayout
   title="privacy"
-  description="What aocn.dev does with your data: your email address if you ask for door emails, and nothing else. No cookies, no analytics, no tracking."
+  description="What aocn.dev does with your data: your email address if you ask for door emails, and nothing else. No cookies, no tracking, only visit counts."
   pola={{ mood: 'neutral', message: 'I keep less about you than about the crew.' }}
 >
   <TextPage command="$ cat privacy.txt" title="privacy">
     <p>Last updated: October 12, 2026</p>
     <p>
       This page explains what aocn.dev does with your data and what rights you have under the GDPR. The short version:{' '}
-      <strong>your email address is stored only if you ask for door emails, and there are no cookies, no analytics and no tracking.</strong>
+      <strong>your email address is stored only if you ask for door emails, and there are no cookies and no tracking. Visits are counted, but not who made them.</strong>
     </p>
 
     <h2>who is responsible</h2>
@@ -47,7 +47,15 @@ const LIST_DELETED_BY = 'January 31, 2027';
 
     <h2>visiting the site</h2>
     <ul>
-      <li>No cookies, no analytics, no tracking. Fonts and scripts come from aocn.dev itself.</li>
+      <li>No cookies and no tracking. Fonts and scripts come from aocn.dev itself.</li>
+      <li>
+        <strong>Visit counts:</strong> each page tells counter.dev that it was opened. When you arrive from another site,
+        counter.dev also receives that site's address, and works out your country, browser, device type, operating
+        system and language from the request. It keeps totals per day, plus a list of the last 30 visits (time, country,
+        the site you came from, device type and operating system), never your IP address. Nothing is stored in or read
+        from your browser for this. Legal basis: our legitimate interest in knowing how many people the calendar reaches
+        (Art. 6(1)(f) GDPR).
+      </li>
       <li>Your browser remembers whether you switched the vim keys off. That setting never leaves your browser.</li>
       <li>
         The hosting providers log requests, including your IP address, to run and protect the service. Legal basis:
@@ -67,6 +75,10 @@ const LIST_DELETED_BY = 'January 31, 2027';
       data may be transferred to the USA; those transfers are covered by the EU-US Data Privacy Framework or the EU's
       standard contractual clauses.
     </p>
+    <p>
+      <strong><a href="https://counter.dev/pages/privacy.html" target="_blank" rel="noopener">counter.dev</a></strong> counts
+      visits, without cookies. It is run from Germany, on servers at Linode in Frankfurt, behind Cloudflare.
+    </p>
 
     <h2>how long it is kept</h2>
     <ul>
@@ -76,6 +88,7 @@ const LIST_DELETED_BY = 'January 31, 2027';
         until {LIST_DELETED_BY}, when the whole list is deleted after the calendar's last emails.
       </li>
       <li>Request logs: as long as the hosting providers keep them, for Google Cloud 30 days.</li>
+      <li>Daily visit totals: as long as counter.dev keeps them, which is indefinitely. The list of recent visits only ever holds the last 30.</li>
     </ul>
 
     <h2>your rights</h2>

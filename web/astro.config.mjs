@@ -8,6 +8,11 @@ import vue from '@astrojs/vue';
 // for features this site does not use. See AGENTS.md → Rendering.
 const isBuild = process.argv.includes('build');
 
+// Netlify sets CONTEXT to "production" only for the build that goes live, so deploy
+// previews, branch deploys and local builds do not add to the visit counts. Decided at
+// build time, because an on-demand page cannot read the build's environment.
+const countVisits = process.env.CONTEXT === 'production';
+
 // https://astro.build/config
 export default defineConfig({
   // Canonical URLs and social image URLs are built from this.
@@ -18,6 +23,9 @@ export default defineConfig({
   // Locally, /api/* goes to the API from `devbox run api`, the way netlify.toml sends it
   // to Cloud Run in production: same prefix, stripped before it reaches the API.
   vite: {
+    define: {
+      'import.meta.env.COUNT_VISITS': JSON.stringify(countVisits),
+    },
     server: {
       proxy: {
         '^/api/': { target: 'http://localhost:8080', rewrite: (path) => path.replace(/^\/api/, '') },
