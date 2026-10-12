@@ -58,6 +58,32 @@ const imageUrl = image ? new URL(image, Astro.site) : undefined;
     <meta name="twitter:card" content={imageUrl ? 'summary_large_image' : 'summary'} />
 
     <Font cssVariable="--font-mono" preload />
+
+    {
+      import.meta.env.COUNT_VISITS && (
+        <script is:inline>
+          // Visit counts (see /privacy). A cut-down copy of counter.dev's script
+          // (https://github.com/ihucos/counter.dev, AGPL-3.0) that stores and reads
+          // nothing on the device: no sessionStorage, no screen size, no cached response.
+          // So a reload of the landing page counts as a new visit; that is the price.
+          // The offset is CET, December's time zone, used to bucket visits by hour.
+          (function () {
+            var server = 'https://t.counter.dev';
+            var id = 'f3711968-dc77-4762-b403-abbe686b0730';
+            // A visit starts on a page not reached from aocn.dev itself. The delay is
+            // counter.dev's: a tab closed within seconds is not counted as a visit.
+            if (!document.referrer.startsWith(location.origin)) {
+              setTimeout(function () {
+                fetch(server + '/track?' + new URLSearchParams({ referrer: document.referrer, id: id, utcoffset: '1' }), {
+                  cache: 'no-store',
+                });
+              }, 4500);
+            }
+            navigator.sendBeacon(server + '/trackpage', new URLSearchParams({ id: id, page: location.pathname }));
+          })();
+        </script>
+      )
+    }
   </head>
   <body class="baseLayout">
     <Sky />

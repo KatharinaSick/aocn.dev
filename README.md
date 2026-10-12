@@ -1,112 +1,41 @@
 # aocn.dev
 
-The website and API for **Advent of Cloud Native** — a 24-day Cloud Native advent calendar in the
-spirit of Advent of Code.
+**Advent of Cloud Native** is a 24-day advent calendar for Cloud Native, in the spirit of Advent of Code.
 
-Twelve CNCF projects, two days each. Every other day starting December 1 a new door opens with a
-5–10 minute maintainer interview and a hands-on challenge that takes 15–30 minutes. Each challenge
-starts from something running and broken; players fix it and verify their result against a live
-cluster with the `aocn` CLI.
+From December 1, a new door opens every other day. Each door has a short interview with a CNCF maintainer and a
+hands-on challenge. The challenge starts with something broken on a Kubernetes cluster. You fix it and check your
+fix with the `aocn` CLI.
 
-It all tells one story: POLARIS-7, the dry AI of an Arctic research station, spends December watching a
-stranded crew break everything on her cluster. Players are the station's new engineer.
+## What's in this repo
 
-The challenges and the `aocn` CLI live in their own repositories.
-
-## Status
-
-The website has its pre-launch pages: the landing page with the countdown to door 1, the
-`how it works` man page, a 404 page and the door calendar as an `.ics` file. The email signup works:
-it is double opt-in, confirmed subscribers are Resend contacts, and the API keeps the proof of
-each confirmation in Postgres (Neon). The full stack is written down in [AGENTS.md](AGENTS.md).
+This repo holds the website and its API. The challenges and the `aocn` CLI live in their own repositories.
 
 ```
-web/    Astro site, deployed to Netlify
-api/    Go service on Cloud Run: health check, email signup, Postgres migrations
-infra/  GCP platform, managed with OpenTofu
+web/    the website (Astro)
+api/    the API (Go)
+infra/  the Google Cloud setup (OpenTofu)
 ```
 
-## The website
+## Development
 
-The site is the station console of POLARIS-7: one monospace typeface, square corners and an aurora
-behind every page. Every page is prerendered.
-
-| Page | |
-|---|---|
-| `/` | Pre-launch landing: countdown to door 1, email signup, add to calendar |
-| `/how-it-works` | The man page: what the calendar is, the premise, why it matters |
-| `/calendar.ics` | Every door opening as a calendar file to import, built from the schedule |
-| `/privacy` | What the site does with data (GDPR) |
-| `/imprint` | Who is behind the site (§ 25 MedienG) |
-| `/subscribe/confirm` | Where the link in the confirmation email leads (`noindex`) |
-| `/design-system` | Every design token and component, rendered live (not linked, `noindex`) |
-| `404` | Not found, as a vim error |
-
-- **The schedule** lives in `web/src/lib/doors.ts`, the only place a date may appear. It decides when
-  each door opens and is covered by unit tests.
-- **The design tokens** live in `web/src/styles/base.css`; `/design-system` documents them.
-- **Vim keys** work on every page (`?` lists them), with an off switch in the help overlay.
-- **Nothing about a door's content** is in this repository before the door opens: no project names,
-  no story beyond the premise, no solutions.
-
-## Email signup
-
-One email per door, double opt-in: `notify me` sends a confirmation link, and the address becomes a
-Resend contact in the doors segment only once that link is confirmed.
-
-- **Limits:** 3 confirmation emails per address per 24 hours (counted in Postgres) and 20 requests per
-  IP per hour. Bots get a honeypot field.
-- **The form says "sent" even when nothing was sent.** Past the per-address limit, or with the
-  honeypot filled in, the answer is the same as for a real send. A different answer would let
-  anyone find out which addresses were tried. Five clicks with one address mean three emails.
-- **Proof of consent:** every confirmation is a row in `subscribe_confirmations`. Who is subscribed
-  right now is Resend's to know.
-- **Unsubscribing** happens through Resend's link in the door emails, so every door email must
-  carry it (`{{{RESEND_UNSUBSCRIBE_URL}}}`). Until the first one on December 1 there is no link
-  yet: anyone who asks is removed by hand in Resend.
-
-## Getting started
-
-Everything runs through [devbox](https://www.jetify.com/devbox), which pins Go, Node and OpenTofu so
-nothing has to be installed globally. `gcloud` is the exception and stays a local install.
+You need [devbox](https://www.jetify.com/devbox). It installs Go, Node, OpenTofu and Postgres for this project.
 
 ```sh
 devbox shell
 npm install --prefix web
-devbox services up -b   # local Postgres on :54329
-devbox run web          # website on :4321
-devbox run api          # API on :8080, migrates the local database on start
+devbox services up -b   # Postgres
+devbox run web          # website on http://localhost:4321
+devbox run api          # API on http://localhost:8080
 ```
 
-| Command | Description |
-|---|---|
-| `devbox run web` | Astro dev server |
-| `devbox services up -b` | Local Postgres, in the background (`devbox services stop` to stop it) |
-| `devbox run api` | Go API in dev mode: emails are logged instead of sent, unless `RESEND_API_KEY` is set |
-| `devbox run build` | Production build of the website (type check, tests, build), and checks the API compiles |
-| `devbox run test` | Go tests (against the local Postgres) and website tests |
-| `npm test --prefix web` | Website tests only (Vitest) |
-| `npm run check --prefix web` | Website type check only |
-
-### Telemetry
-
-The API is instrumented with OpenTelemetry and configured entirely through the standard `OTEL_*`
-environment variables, so no backend is named in code. With no endpoint set, spans are printed to
-stdout, which is why local development needs no collector:
-
-```sh
-OTEL_EXPORTER_OTLP_ENDPOINT=https://<env>.live.dynatrace.com/api/v2/otlp \
-OTEL_EXPORTER_OTLP_HEADERS="Authorization=Api-Token <token>" \
-devbox run api
-```
+Run the tests with `devbox run test`, and a full build with `devbox run build`.
 
 ## Deployment
 
-Both halves deploy from `main`, and neither is configured in a dashboard. The website goes to Netlify
-from `web/`, where `aocn.dev` is canonical and `adventofcloudnative.dev` redirects to it. The API runs
-on Cloud Run, and `netlify.toml` proxies `/api/*` to it so the browser only ever talks to `aocn.dev`.
+Everything deploys from `main`.
 
-A failing website test or type error fails `npm run build`, and so the Netlify deploy: a broken
-schedule never reaches production.
+- **Website:** Netlify builds `web/` and hosts it. The build runs the tests, so a failing test stops the deploy.
+- **API:** a GitHub Actions workflow applies `infra/`, runs the tests and rolls out the API to Cloud Run.
+- Netlify forwards `/api/*` to the API, so the browser only talks to `aocn.dev`.
 
-[infra/](infra/README.md) describes the platform underneath.
+See [infra/README.md](infra/README.md) for the platform setup.
