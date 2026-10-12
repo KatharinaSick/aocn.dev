@@ -1,0 +1,100 @@
+---
+// The privacy policy (GDPR Art. 13), kept as short as what the site does with data. It has
+// to change in the same change as anything that collects or keeps more: a new form, a
+// new provider, logins.
+import TextPage from '../components/TextPage.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { CONTACT_EMAIL } from '../lib/contact';
+
+// Not a door date: the list outlives the last door by a few weeks, for the final email
+// after the calendar and the Christmas break. Deleting it by then is a promise.
+const LIST_DELETED_BY = 'January 31, 2027';
+---
+
+<BaseLayout
+  title="privacy"
+  description="What aocn.dev does with your data: your email address if you ask for door emails, and nothing else. No cookies, no analytics, no tracking."
+  pola={{ mood: 'neutral', message: 'I keep less about you than about the crew.' }}
+>
+  <TextPage command="$ cat privacy.txt" title="privacy">
+    <p>Last updated: October 12, 2026</p>
+    <p>
+      This page explains what aocn.dev does with your data and what rights you have under the GDPR. The short version:{' '}
+      <strong>your email address is stored only if you ask for door emails, and there are no cookies, no analytics and no tracking.</strong>
+    </p>
+
+    <h2>who is responsible</h2>
+    <p>
+      Katharina Sick, Linz, Austria. aocn.dev is a personal project. For questions, requests or to have your data
+      deleted, write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+    </p>
+
+    <h2>door emails</h2>
+    <p>If you sign up for door emails:</p>
+    <ul>
+      <li><strong>What is stored:</strong> your email address, when you signed up and when you confirmed.</li>
+      <li><strong>Why:</strong> to send you one email whenever a door opens. Nothing else, and never to anyone else.</li>
+      <li>
+        <strong>Legal basis:</strong> your consent (Art. 6(1)(a) GDPR). Signing up only sends a confirmation email; you
+        are on the list once you click the link in it.
+      </li>
+      <li>
+        <strong>Abuse protection:</strong> so that nobody can flood an inbox with confirmation emails, a keyed hash of
+        the address (not the address itself) is kept for 24 hours, and requests are counted per IP address in memory.
+        Legal basis: our legitimate interest in preventing abuse (Art. 6(1)(f) GDPR).
+      </li>
+    </ul>
+
+    <h2>visiting the site</h2>
+    <ul>
+      <li>No cookies, no analytics, no tracking. Fonts and scripts come from aocn.dev itself.</li>
+      <li>Your browser remembers whether you switched the vim keys off. That setting never leaves your browser.</li>
+      <li>
+        The hosting providers log requests, including your IP address, to run and protect the service. Legal basis:
+        legitimate interest (Art. 6(1)(f) GDPR).
+      </li>
+    </ul>
+
+    <h2>who processes your data</h2>
+    <ul>
+      <li><strong><a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">Resend</a></strong> sends the emails and keeps the list of subscribers.</li>
+      <li><strong><a href="https://neon.com/privacy-policy" target="_blank" rel="noopener">Neon</a></strong> hosts the database with the signup records, on servers in Frankfurt, Germany.</li>
+      <li><strong><a href="https://cloud.google.com/terms/cloud-privacy-notice" target="_blank" rel="noopener">Google Cloud</a></strong> runs the API, on servers in Belgium.</li>
+      <li><strong><a href="https://www.netlify.com/privacy/" target="_blank" rel="noopener">Netlify</a></strong> hosts the website.</li>
+    </ul>
+    <p>
+      Each name links to that provider's own privacy policy. Each of them processes data only on our behalf, under a data processing agreement. All four are US companies, so
+      data may be transferred to the USA; those transfers are covered by the EU-US Data Privacy Framework or the EU's
+      standard contractual clauses.
+    </p>
+
+    <h2>how long it is kept</h2>
+    <ul>
+      <li>The hash for abuse protection: 24 hours.</li>
+      <li>
+        Your email address and the record of your confirmation: until you ask for them to be deleted, and at the latest
+        until {LIST_DELETED_BY}, when the whole list is deleted after the calendar's last emails.
+      </li>
+      <li>Request logs: as long as the hosting providers keep them, for Google Cloud 30 days.</li>
+    </ul>
+
+    <h2>your rights</h2>
+    <p>
+      You can ask for a copy of your data, have it corrected or deleted, restrict or object to its processing, and get it
+      in a machine-readable form. You can withdraw your consent to door emails at any time: write to{' '}
+      <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>, or use the unsubscribe link in any door email. Withdrawing
+      does not make earlier emails unlawful.
+    </p>
+    <p>
+      If you think your data is processed unlawfully, you can complain to a data protection authority: in Austria the{' '}
+      <a href="https://www.dsb.gv.at/" target="_blank" rel="noopener">Datenschutzbehörde</a>, or the one in your country.
+      Reaching out first is usually quicker.
+    </p>
+
+    <h2>changes</h2>
+    <p>
+      When the site starts doing more with data, for example once logins arrive, this page changes first, and the date
+      at the top with it.
+    </p>
+  </TextPage>
+</BaseLayout>

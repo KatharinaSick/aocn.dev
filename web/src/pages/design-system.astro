@@ -10,6 +10,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PolaFace, { type PolaMood } from '../components/PolaFace.astro';
 import PromptLine from '../components/PromptLine.astro';
 import TextInput from '../components/TextInput.astro';
+import TextPage from '../components/TextPage.astro';
 import baseCss from '../styles/base.css?raw';
 
 const moods: PolaMood[] = ['neutral', 'annoyed', 'worried', 'fond'];
@@ -377,13 +378,36 @@ const colorGroups = [
             is a <code>size-touch</code> tap target.
           </li>
           <li>
-            The footer is small and muted: the domain on the left, the GitHub mark in the middle, the supporter
-            on the right. Its links are underlined but stay muted. The vim keys hint joins
-            it with the keys.
+            The footer is small and muted: the domain, <code>privacy</code> and <code>imprint</code> on the left, the
+            GitHub mark in the middle, the supporter on the right. Its links are underlined but stay muted. The vim keys
+            hint joins it with the keys.
           </li>
           <li>
-            On mobile it is two lines, aligned right: the GitHub mark with the word GitHub, then the supporter. The domain and the
-            vim keys hint are left out there. Touch screens never show the vim keys hint: the keys need a keyboard.
+            On mobile it is three lines, aligned right: the GitHub mark with the word GitHub, the supporter, then
+            <code>privacy</code> and <code>imprint</code>. The domain and the vim keys hint are left out there. Touch
+            screens never show the vim keys hint: the keys need a keyboard.
+          </li>
+        </ul>
+      </div>
+
+      <div class="designSystemGroup">
+        <h3 class="designSystemGroupTitle">TextPage · command · title</h3>
+        <TextPage command="$ cat example.txt" title="example">
+          <p>A paragraph of reading text, in <code>text-body</code>, with <strong>one highlight</strong> and a <a href="/privacy">link</a>.</p>
+          <h2>a heading</h2>
+          <ul>
+            <li>A list item.</li>
+            <li>Another one.</li>
+          </ul>
+        </TextPage>
+        <ul class="designSystemRules">
+          <li>
+            For pages that are information rather than story: <code>/privacy</code> and <code>/imprint</code>. The
+            command line, a title with the aurora underscore, and the text in one column of at most 72 characters.
+          </li>
+          <li>
+            The pages stay plain HTML: <code>h2</code>, <code>p</code>, <code>ul</code>, <code>strong</code> and links
+            get their look from the component. Headings are uppercase with a line above, like the man page's sections.
           </li>
         </ul>
       </div>
@@ -419,7 +443,7 @@ const colorGroups = [
         <ul class="designSystemRules">
           <li>
             The ways to stay in the loop in one row: the email field, <code>notify me</code> and <code>add to calendar</code>, with
-            the reassurance below. On the landing page and in the man page's STAYING IN THE LOOP; one component, so
+            the reassurance below and a link to <code>/privacy</code>. On the landing page and in the man page's STAYING IN THE LOOP; one component, so
             both work the same.
           </li>
           <li>

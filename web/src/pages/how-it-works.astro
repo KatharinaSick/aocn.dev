@@ -1,7 +1,7 @@
 ---
 // "how it works", written as a man page: what the calendar is, the story's premise, why
-// it matters, points, and how to stay in the loop. Nothing about what is behind
-// a door, and nothing about the challenge tooling yet.
+// it matters, points, how to stay in the loop and what happens with your data. Nothing
+// about what is behind a door, and nothing about the challenge tooling yet.
 import NotifyRow from '../components/NotifyRow.astro';
 import Keycap from '../components/Keycap.vue';
 import BaseLayout from '../layouts/BaseLayout.astro';
@@ -119,6 +119,15 @@ const glance = [
           </div>
         </section>
 
+        <section class="manSection" aria-labelledby="man-privacy">
+          <h2 class="manSectionName" id="man-privacy">privacy</h2>
+          <div class="manSectionBody">
+            <p>
+              Your email address is only stored if you ask for door emails, and only to send them. No cookies, no
+              analytics, no tracking. The details are in the <a href="/privacy">privacy policy</a>.
+            </p>
+          </div>
+        </section>
         <section class="manSection" aria-labelledby="man-keys">
           <h2 class="manSectionName" id="man-keys">keys</h2>
           <div class="manSectionBody">
