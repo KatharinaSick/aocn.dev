@@ -13,6 +13,9 @@ on:
     branches: [main]
     paths:
       - 'api/**'
+      # The API carries schedule.yaml in its image.
+      - 'schedule.yaml'
+      - 'testdata/**'
       - 'infra/**'
       - '.github/workflows/deploy.yml'
 
@@ -137,7 +140,8 @@ jobs:
           # that ever stops resolving, rather than pushing to a malformed path.
           : "${PROJECT:?auth did not report a project_id}"
           IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPOSITORY}/api:${GITHUB_SHA}"
-          docker build -t "$IMAGE" api
+          # The repository root is the context, so the image can carry schedule.yaml.
+          docker build -f api/Dockerfile -t "$IMAGE" .
           docker push "$IMAGE"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 

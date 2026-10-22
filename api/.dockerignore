@@ -1,3 +1,0 @@
-# The image is built from source; these only invalidate the build cache.
-Dockerfile
-.dockerignore

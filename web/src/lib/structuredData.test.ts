@@ -9,10 +9,6 @@ describe('landingStructuredData', () => {
     expect(event.startDate).toBe(doorOpensAt(1).toISOString());
     expect(event.endDate).toBe(doorOpensAt(DOOR_COUNT).toISOString());
   });
-
-  it('starts on Dec 1 at 06:00 CET', () => {
-    expect(event.startDate).toBe('2026-12-01T05:00:00.000Z');
-  });
 });
 
 describe('toJsonLd', () => {

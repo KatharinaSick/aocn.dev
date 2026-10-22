@@ -1,73 +1,98 @@
 /**
- * The Advent of Cloud Native schedule. This is the only place a date may live.
- *
- * Twelve doors open every other day, Dec 1 to Dec 23, at 06:00 CET. CET is UTC+1 and
- * station time is fixed: 06:00 CET is one moment worldwide (05:00 UTC), never 06:00 in
- * the player's own time zone, and daylight saving time does not apply.
- *
- * Nothing about a door's content lives here. Project names stay out of this public
- * repository until their door is published.
+ * The Advent of Cloud Native schedule: when doors open, and what that means for the
+ * page. The dates themselves live in schedule.yaml at the repository root, which
+ * explains station time; this file has none of its own.
  *
  * Every function takes `now` instead of reading the clock, so the schedule can be tested
  * at any moment and pages can decide which moment they render for.
  */
-
-export const DOOR_COUNT = 12;
+import schedule from 'virtual:schedule';
+import type { Schedule } from './schedule';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 
-/** Door 1: Dec 1 2026, 06:00 CET. */
-const FIRST_DOOR_OPENS_AT = Date.UTC(2026, 11, 1, 5);
+export interface Doors {
+  /** How many doors there are: the length of the list in schedule.yaml. */
+  count: number;
+  /** When a door opens. */
+  doorOpensAt(door: number): Date;
+  /**
+   * Whether a door is open at `now`. This decides whether a door's content may be shown:
+   * anything about a door that is not open must not be rendered or served.
+   */
+  isDoorOpen(door: number, now: Date): boolean;
+  /** The next door to open after `now` and when, or null once every door is open. */
+  nextDoor(now: Date): { door: number; opensAt: Date } | null;
+  /**
+   * Where the season stands at `now`: before door 1 opens, during December, or from the
+   * finale on Christmas Eve.
+   */
+  seasonPhase(now: Date): 'before' | 'during' | 'after';
+  /**
+   * Days since the last incident, for POLARIS-7's prompt line. A station day starts at
+   * 06:00 CET, like the doors.
+   *
+   * - Before door 1: days since last year's Christmas Eve.
+   * - While doors open: 00 on the day a door opens, 01 on the day in between.
+   * - From the finale on Christmas Eve: it resets and counts up from there.
+   */
+  incidentDays(now: Date): number;
+}
 
-/** Doors open every other day. */
-const DOOR_INTERVAL = 2 * DAY;
+/** The rules above for any schedule. The site uses the real one, exported below. */
+export function doorsOf({ doors, christmasEve }: Schedule): Doors {
+  const count = doors.length;
+  const firstDoorOpensAt = doors[0];
 
-/**
- * The "last incident" the prompt line counts from: Christmas Eve at 06:00 CET. Before the
- * season it is last year's; from Christmas Eve 2026 on, it is this year's finale.
- */
-const CHRISTMAS_EVE_BEFORE_SEASON = Date.UTC(2025, 11, 24, 5);
-const CHRISTMAS_EVE_FINALE = Date.UTC(2026, 11, 24, 5);
-
-function assertDoorNumber(door: number): void {
-  if (!Number.isInteger(door) || door < 1 || door > DOOR_COUNT) {
-    throw new RangeError(`There is no door ${door}. Doors are numbered 1 to ${DOOR_COUNT}.`);
+  function assertDoorNumber(door: number): void {
+    if (!Number.isInteger(door) || door < 1 || door > count) {
+      throw new RangeError(`There is no door ${door}. Doors are numbered 1 to ${count}.`);
+    }
   }
-}
 
-/** When a door opens. */
-export function doorOpensAt(door: number): Date {
-  assertDoorNumber(door);
-  return new Date(FIRST_DOOR_OPENS_AT + (door - 1) * DOOR_INTERVAL);
-}
-
-/**
- * Whether a door is open at `now`. This decides whether a door's content may be shown:
- * anything about a door that is not open must not be rendered or served.
- */
-export function isDoorOpen(door: number, now: Date): boolean {
-  return now.getTime() >= doorOpensAt(door).getTime();
-}
-
-/** The next door to open after `now` and when, or null once every door is open. */
-export function nextDoor(now: Date): { door: number; opensAt: Date } | null {
-  for (let door = 1; door <= DOOR_COUNT; door++) {
-    const opensAt = doorOpensAt(door);
-    if (opensAt.getTime() > now.getTime()) return { door, opensAt };
+  function doorOpensAt(door: number): Date {
+    assertDoorNumber(door);
+    return new Date(doors[door - 1]);
   }
-  return null;
+
+  /** Whole station days (06:00 CET to 06:00 CET) from `since` to `now`. */
+  function stationDaysBetween(since: number, now: Date): number {
+    return Math.floor((now.getTime() - since) / DAY);
+  }
+
+  return {
+    count,
+    doorOpensAt,
+    isDoorOpen(door, now) {
+      return now.getTime() >= doorOpensAt(door).getTime();
+    },
+    nextDoor(now) {
+      const i = doors.findIndex((opensAt) => opensAt > now.getTime());
+      return i === -1 ? null : { door: i + 1, opensAt: new Date(doors[i]) };
+    },
+    seasonPhase(now) {
+      if (now.getTime() < firstDoorOpensAt) return 'before';
+      if (now.getTime() < christmasEve.finale) return 'during';
+      return 'after';
+    },
+    incidentDays(now) {
+      if (now.getTime() >= christmasEve.finale) {
+        return stationDaysBetween(christmasEve.finale, now);
+      }
+      if (now.getTime() >= firstDoorOpensAt) {
+        const lastOpened = Math.max(...doors.filter((opensAt) => opensAt <= now.getTime()));
+        return stationDaysBetween(lastOpened, now);
+      }
+      return Math.max(0, stationDaysBetween(christmasEve.beforeSeason, now));
+    },
+  };
 }
 
-/**
- * Where the season stands at `now`: before door 1 opens, during December, or from the
- * finale on Christmas Eve.
- */
-export function seasonPhase(now: Date): 'before' | 'during' | 'after' {
-  if (now.getTime() < FIRST_DOOR_OPENS_AT) return 'before';
-  if (now.getTime() < CHRISTMAS_EVE_FINALE) return 'during';
-  return 'after';
-}
+const season = doorsOf(schedule);
+
+export const DOOR_COUNT = season.count;
+export const { doorOpensAt, isDoorOpen, nextDoor, seasonPhase, incidentDays } = season;
 
 // CET without daylight saving time. (IANA's Etc/ zones have inverted signs: GMT-1 is UTC+1.)
 export const STATION_TIME_ZONE = 'Etc/GMT-1';
@@ -98,32 +123,4 @@ export function formatStationTime(date: Date): string {
 /** The same moment written out for screen readers: "December 1 at 06:00 CET". */
 export function formatStationTimeLong(date: Date): string {
   return `${formatStationDayLong(date)} at ${formatStationClock(date)}`;
-}
-
-/** Whole station days (06:00 CET to 06:00 CET) from `since` to `now`. */
-function stationDaysBetween(since: number, now: Date): number {
-  return Math.floor((now.getTime() - since) / DAY);
-}
-
-/**
- * Days since the last incident, for POLARIS-7's prompt line. A station day starts at
- * 06:00 CET, like the doors.
- *
- * - Before Dec 1: days since Christmas Eve 2025.
- * - Dec 1 to Dec 23: 00 on the day a door opens, 01 on the day in between.
- * - From Christmas Eve 2026: it resets and counts up from the finale.
- */
-export function incidentDays(now: Date): number {
-  if (now.getTime() >= CHRISTMAS_EVE_FINALE) {
-    return stationDaysBetween(CHRISTMAS_EVE_FINALE, now);
-  }
-  if (now.getTime() >= FIRST_DOOR_OPENS_AT) {
-    const lastOpened = Math.max(
-      ...Array.from({ length: DOOR_COUNT }, (_, i) => doorOpensAt(i + 1).getTime()).filter(
-        (opensAt) => opensAt <= now.getTime(),
-      ),
-    );
-    return stationDaysBetween(lastOpened, now);
-  }
-  return Math.max(0, stationDaysBetween(CHRISTMAS_EVE_BEFORE_SEASON, now));
 }

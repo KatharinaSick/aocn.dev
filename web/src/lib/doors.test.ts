@@ -1,21 +1,40 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import * as real from './doors';
 import {
-  DOOR_COUNT,
-  doorOpensAt,
+  doorsOf,
   formatStationClock,
   formatStationDay,
   formatStationDayLong,
   formatStationTime,
   formatStationTimeLong,
-  incidentDays,
-  isDoorOpen,
-  nextDoor,
-  seasonPhase,
 } from './doors';
+import { parseSchedule } from './schedule';
+
+// The rules are tested on a season written here, shaped like this year's: twelve doors
+// every other day from Dec 1 2026 at 06:00 CET, and Christmas Eve on either side. Tests
+// of schedule.yaml itself, which may change, are in schedule.test.ts.
+const season = doorsOf({
+  doors: Array.from({ length: 12 }, (_, i) => Date.UTC(2026, 11, 1 + 2 * i, 5)),
+  christmasEve: { beforeSeason: Date.UTC(2025, 11, 24, 5), finale: Date.UTC(2026, 11, 24, 5) },
+});
+const { count: DOOR_COUNT, doorOpensAt, incidentDays, isDoorOpen, nextDoor, seasonPhase } = season;
 
 // Every time below is written in UTC. 06:00 CET is 05:00 UTC.
 const at = (iso: string) => new Date(iso);
 const MS = 1;
+
+describe('the exports', () => {
+  it('follow schedule.yaml', () => {
+    const schedule = parseSchedule(readFileSync(new URL('../../../schedule.yaml', import.meta.url), 'utf8'));
+    expect(real.DOOR_COUNT).toBe(schedule.doors.length);
+    for (let door = 1; door <= real.DOOR_COUNT; door++) {
+      expect(real.doorOpensAt(door).getTime()).toBe(schedule.doors[door - 1]);
+    }
+    expect(real.seasonPhase(new Date(schedule.christmasEve.finale))).toBe('after');
+    expect(real.incidentDays(new Date(schedule.christmasEve.beforeSeason))).toBe(0);
+  });
+});
 
 describe('doorOpensAt', () => {
   it('opens door 1 on Dec 1 2026 at 06:00 CET', () => {

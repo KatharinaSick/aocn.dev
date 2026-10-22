@@ -1,4 +1,6 @@
-# The build context is api/, so go.mod and config.yaml are at its root.
+# The build context is the repository root, so the image can carry schedule.yaml, which
+# the website reads too: docker build -f api/Dockerfile . Dockerfile.dockerignore next to
+# this file keeps everything but api/ and schedule.yaml out of the context.
 
 FROM golang:1.27-alpine AS build
 
@@ -6,10 +8,10 @@ WORKDIR /src
 
 # Dependencies first. They change far less often than the source, so this layer
 # survives most rebuilds.
-COPY go.mod go.sum ./
+COPY api/go.mod api/go.sum ./
 RUN go mod download
 
-COPY . .
+COPY api/ .
 
 # Static: the runtime image has no libc for a cgo-linked binary to find.
 # -trimpath keeps build machine paths out of panic traces.
@@ -24,6 +26,8 @@ FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=build /out/api-server ./api-server
 COPY --from=build /src/config.yaml ./config.yaml
+# config.yaml points at ../schedule.yaml, as it does from api/ locally.
+COPY schedule.yaml /schedule.yaml
 
 USER nonroot:nonroot
 

@@ -25,6 +25,10 @@ type Config struct {
 		Port string `yaml:"port"`
 	} `yaml:"server"`
 
+	Schedule struct {
+		Path string `yaml:"path"`
+	} `yaml:"schedule"`
+
 	Site struct {
 		URL string `yaml:"url"`
 	} `yaml:"site"`

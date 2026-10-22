@@ -1,0 +1,168 @@
+package schedule
+
+import (
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"testing"
+	"time"
+)
+
+// The same files as web/src/lib/schedule.test.ts reads.
+const repo = "../../.."
+
+func load(t *testing.T, path string) *Schedule {
+	t.Helper()
+	s, err := Load(filepath.Join(repo, path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+func utc(t *testing.T, s string) time.Time {
+	t.Helper()
+	parsed, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return parsed
+}
+
+// Written out in the website's test too: both sides must agree on every moment.
+func TestFixtureOpeningTimes(t *testing.T) {
+	s := load(t, "testdata/schedule.yaml")
+
+	want := []string{"2030-12-01T05:00:00Z", "2030-12-03T05:00:00Z", "2030-12-05T00:30:00Z"}
+	if s.Doors() != len(want) {
+		t.Fatalf("Doors() = %d, want %d", s.Doors(), len(want))
+	}
+	for i, w := range want {
+		opensAt, err := s.OpensAt(i + 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !opensAt.Equal(utc(t, w)) {
+			t.Errorf("door %d opens at %s, want %s", i+1, opensAt.UTC().Format(time.RFC3339), w)
+		}
+	}
+
+	if !s.christmasEveBeforeSeason.Equal(utc(t, "2029-12-24T05:00:00Z")) {
+		t.Errorf("christmasEve.beforeSeason = %s", s.christmasEveBeforeSeason.UTC())
+	}
+	if !s.christmasEveFinale.Equal(utc(t, "2030-12-24T05:00:00Z")) {
+		t.Errorf("christmasEve.finale = %s", s.christmasEveFinale.UTC())
+	}
+}
+
+func TestFixtureDoorOneOpensOnTheSecond(t *testing.T) {
+	s := load(t, "testdata/schedule.yaml")
+	opensAt := utc(t, "2030-12-01T05:00:00Z")
+
+	before := opensAt.Add(-time.Second)
+	if open, _ := s.IsOpen(1, before); open {
+		t.Error("door 1 open one second before it opens")
+	}
+	if door, at, ok := s.Next(before); !ok || door != 1 || !at.Equal(opensAt) {
+		t.Errorf("Next one second before door 1 = %d, %s, %v", door, at, ok)
+	}
+
+	if open, _ := s.IsOpen(1, opensAt); !open {
+		t.Error("door 1 closed at the moment it opens")
+	}
+	if door, _, ok := s.Next(opensAt); !ok || door != 2 {
+		t.Errorf("Next when door 1 opens = %d, %v, want door 2", door, ok)
+	}
+}
+
+func TestFixtureAfterTheLastDoor(t *testing.T) {
+	s := load(t, "testdata/schedule.yaml")
+	now := utc(t, "2030-12-05T00:30:00Z")
+
+	for door := 1; door <= s.Doors(); door++ {
+		if open, _ := s.IsOpen(door, now); !open {
+			t.Errorf("door %d closed after the last door opened", door)
+		}
+	}
+	if door, _, ok := s.Next(now); ok {
+		t.Errorf("Next after the last door = door %d", door)
+	}
+}
+
+func TestNoSuchDoor(t *testing.T) {
+	s := load(t, "testdata/schedule.yaml")
+	for _, door := range []int{0, -1, 4} {
+		if _, err := s.OpensAt(door); err == nil {
+			t.Errorf("OpensAt(%d) accepted", door)
+		}
+		if _, err := s.IsOpen(door, utc(t, "2031-01-01T00:00:00Z")); err == nil {
+			t.Errorf("IsOpen(%d) accepted", door)
+		}
+	}
+}
+
+// What must always hold for the real schedule. The dates themselves are not repeated
+// here: schedule.yaml is where they live.
+func TestRealSchedule(t *testing.T) {
+	s := load(t, "schedule.yaml")
+
+	if s.Doors() != 12 {
+		t.Errorf("%d doors, want 12", s.Doors())
+	}
+	for i, opensAt := range s.doors {
+		if i > 0 && !opensAt.After(s.doors[i-1]) {
+			t.Errorf("door %d does not open after door %d", i+1, i)
+		}
+		if opensAt.Truncate(time.Minute) != opensAt {
+			t.Errorf("door %d does not open on the minute", i+1)
+		}
+	}
+	if !s.christmasEveBeforeSeason.Before(s.doors[0]) {
+		t.Error("christmasEve.beforeSeason is not before door 1")
+	}
+	if !s.christmasEveFinale.After(s.doors[len(s.doors)-1]) {
+		t.Error("christmasEve.finale is not after the last door")
+	}
+}
+
+// Each file says on its first line what the error must contain; the website's test
+// reads the same files.
+func TestBrokenSchedules(t *testing.T) {
+	dir := filepath.Join(repo, "testdata/schedule-broken")
+	files, err := filepath.Glob(filepath.Join(dir, "*.yaml"))
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no broken schedules in %s: %v", dir, err)
+	}
+	expected := regexp.MustCompile(`(?m)^# error: (.*)$`)
+
+	for _, path := range files {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			match := expected.FindSubmatch(data)
+			if match == nil {
+				t.Fatal(`no "# error:" line`)
+			}
+			_, err = Parse(data)
+			if err == nil {
+				t.Fatal("accepted")
+			}
+			if !strings.Contains(err.Error(), string(match[1])) {
+				t.Errorf("error %q does not contain %q", err, match[1])
+			}
+		})
+	}
+}
+
+func TestLoadNamesTheFile(t *testing.T) {
+	path := filepath.Join(repo, "testdata/schedule-broken/no-offset.yaml")
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), path) {
+		t.Errorf("error %v does not name %s", err, path)
+	}
+	if _, err := Load(filepath.Join(t.TempDir(), "missing.yaml")); err == nil {
+		t.Error("missing file accepted")
+	}
+}
