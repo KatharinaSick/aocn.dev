@@ -61,6 +61,18 @@ describe('schedule.yaml', () => {
   });
 });
 
+describe('an unusual but valid schedule', () => {
+  const dir = new URL('testdata/schedule-valid/', repo);
+
+  // Each file lists on its first line the UTC moment of every door; the Go test reads the same.
+  it.each(readdirSync(dir).filter((name) => name.endsWith('.yaml')))('accepts %s', (name) => {
+    const text = readFileSync(new URL(name, dir), 'utf8');
+    const expected = /^# utc: (.*)$/m.exec(text)?.[1].split(' ');
+    expect(expected).toBeTruthy();
+    expect(parseSchedule(text).doors).toEqual(expected?.map((utc) => new Date(utc).getTime()));
+  });
+});
+
 describe('a broken schedule', () => {
   const dir = new URL('testdata/schedule-broken/', repo);
 

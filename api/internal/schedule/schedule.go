@@ -9,7 +9,9 @@ package schedule
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strconv"
@@ -64,9 +66,17 @@ func Parse(data []byte) (*Schedule, error) {
 	if err := decoder.Decode(&f); err != nil {
 		return nil, err
 	}
+	// Decode reads only the first document, so anything after a --- would be ignored. A
+	// trailing --- counts too: it starts a second, empty document, as on the website.
+	var rest yaml.Node
+	if err := decoder.Decode(&rest); err == nil {
+		return nil, errors.New("must be a single YAML document")
+	} else if !errors.Is(err, io.EOF) {
+		return nil, err
+	}
 
 	if len(f.Doors) == 0 {
-		return nil, fmt.Errorf("doors: must be a list with at least one date")
+		return nil, errors.New("doors: must be a list with at least one date")
 	}
 
 	s := &Schedule{doors: make([]time.Time, len(f.Doors))}

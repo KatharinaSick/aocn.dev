@@ -114,7 +114,7 @@ func TestRealSchedule(t *testing.T) {
 		if i > 0 && !opensAt.After(s.doors[i-1]) {
 			t.Errorf("door %d does not open after door %d", i+1, i)
 		}
-		if opensAt.Truncate(time.Minute) != opensAt {
+		if !opensAt.Truncate(time.Minute).Equal(opensAt) {
 			t.Errorf("door %d does not open on the minute", i+1)
 		}
 	}
@@ -123,6 +123,42 @@ func TestRealSchedule(t *testing.T) {
 	}
 	if !s.christmasEveFinale.After(s.doors[len(s.doors)-1]) {
 		t.Error("christmasEve.finale is not after the last door")
+	}
+}
+
+// Each file lists on its first line the UTC moment of every door; the website's test
+// reads the same files.
+func TestValidSchedules(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join(repo, "testdata/schedule-valid/*.yaml"))
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no valid schedules in testdata/schedule-valid: %v", err)
+	}
+	expected := regexp.MustCompile(`(?m)^# utc: (.*)$`)
+
+	for _, path := range files {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			match := expected.FindSubmatch(data)
+			if match == nil {
+				t.Fatal(`no "# utc:" line`)
+			}
+			s, err := Parse(data)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := strings.Fields(string(match[1]))
+			if s.Doors() != len(want) {
+				t.Fatalf("%d doors, want %d", s.Doors(), len(want))
+			}
+			for i, w := range want {
+				if !s.doors[i].Equal(utc(t, w)) {
+					t.Errorf("door %d opens at %s, want %s", i+1, s.doors[i].UTC().Format(time.RFC3339), w)
+				}
+			}
+		})
 	}
 }
 

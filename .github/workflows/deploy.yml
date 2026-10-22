@@ -13,9 +13,9 @@ on:
     branches: [main]
     paths:
       - 'api/**'
-      # The API carries schedule.yaml in its image.
+      # The API carries schedule.yaml in its image. testdata/ is not in it, and changes reach
+      # main through pull requests, where api-ci.yml runs the tests that read it.
       - 'schedule.yaml'
-      - 'testdata/**'
       - 'infra/**'
       - '.github/workflows/deploy.yml'
 

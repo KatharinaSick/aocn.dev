@@ -10,7 +10,7 @@
  * timestamp type, and yaml.v3 decodes them into Go strings, so neither side guesses: a
  * date needs a date, a time and an offset, or it is rejected.
  */
-import { parse } from 'yaml';
+import { parseAllDocuments } from 'yaml';
 
 export interface Schedule {
   /** When each door opens, door 1 first, in milliseconds since the epoch. */
@@ -26,12 +26,16 @@ const MINUTE = 60 * 1000;
 
 /** Parses schedule.yaml. Throws an Error naming the door or key that is wrong. */
 export function parseSchedule(text: string): Schedule {
-  let file: unknown;
-  try {
-    file = parse(text);
-  } catch (error) {
-    throw new Error(`not valid YAML: ${(error as Error).message}`);
+  // parseAllDocuments rather than parse, so a second document after --- is refused here
+  // the way the Go side refuses it, instead of being reported as a syntax error. It does
+  // not throw: syntax errors sit on each document, and are reported before anything else.
+  const documents = parseAllDocuments(text);
+  for (const document of documents) {
+    if (document.errors.length > 0) throw new Error(`not valid YAML: ${document.errors[0].message}`);
   }
+  // A trailing --- counts too: it starts a second, empty document in both libraries.
+  if (documents.length > 1) throw new Error('must be a single YAML document');
+  const file: unknown = documents.length === 1 ? documents[0].toJS() : null;
 
   const top = asMapping(file, 'schedule', ['doors', 'christmasEve']);
 
@@ -80,8 +84,13 @@ function parseDate(value: unknown, label: string): number {
   }
 
   const [, year, month, day, hour, minute, second, , , offsetHours, offsetMinutes] = match.map(Number);
-  const local = Date.UTC(year, month - 1, day, hour, minute, second);
-  // Date.UTC rolls Feb 30 over into March instead of refusing it, so check it came back unchanged.
+  // Not Date.UTC, which reads years 0 to 99 as 1900 to 1999. Year, month and day are set in
+  // one call, so a valid Feb 29 cannot roll over while the year is still the old one.
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(hour, minute, second, 0);
+  const local = date.getTime();
+  // The Date rolls Feb 30 over into March instead of refusing it, so check it came back unchanged.
   const back = new Date(local);
   const valid =
     back.getUTCFullYear() === year &&
