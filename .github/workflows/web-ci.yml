@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'web/**'
+      # The website builds its dates from it.
+      - 'schedule.yaml'
+      - 'testdata/**'
       - '.github/workflows/web-ci.yml'
 
 # Read-only, so cancelling a superseded run costs nothing.

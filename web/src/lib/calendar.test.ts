@@ -23,9 +23,8 @@ describe('buildCalendar', () => {
       const opensAt = doorOpensAt(i + 1).toISOString().replace(/[-:]/g, '').replace('.000', '');
       expect(field(event, 'DTSTART')).toBe(opensAt);
     });
-    expect(field(events[0], 'DTSTART')).toBe('20261201T050000Z');
-    expect(field(events[0], 'DTEND')).toBe('20261201T053000Z');
-    expect(field(events[11], 'DTSTART')).toBe('20261223T050000Z');
+    const endsAt = new Date(doorOpensAt(1).getTime() + 30 * 60 * 1000);
+    expect(field(events[0], 'DTEND')).toBe(endsAt.toISOString().replace(/[-:]/g, '').replace('.000', ''));
   });
 
   it('gives every door a stable UID, so subscribed calendars update instead of duplicating', () => {

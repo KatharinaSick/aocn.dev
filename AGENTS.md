@@ -112,8 +112,10 @@ Follows the same stack as `KatharinaSick/clubrizer`:
   - **A deliberate scale, not a changelog**: The token set is decided as a scale. Adding a value
     means deciding it belongs in the scale — do not append one-off variables per page.
   - **Class Naming**: camelCase, prefixed with the component name (e.g. `.doorCardHeader`).
-- **Dates**: Door opening times are defined once in `web/src/lib/doors.ts`. Never hardcode a
-  date anywhere else.
+- **Dates**: Door opening times are defined once in `schedule.yaml` at the repository root,
+  read by the website (`web/src/lib/doors.ts`, through `web/plugins/schedule.ts`) and the API
+  (`api/internal/schedule`). Never hardcode a date anywhere else. Both sides must accept and
+  reject the same files; `testdata/` holds the ones their tests share.
 - **SEO**: Every page sets its own title, description and social image through `BaseLayout`. The
   landing page and the profile pages are what get shared — treat their previews as a feature.
   The default social image, `public/social.png`, is drawn from `src/social/SocialImagePage.astro`

@@ -1,0 +1,35 @@
+# The Advent of Cloud Native schedule. This is the only place a date may live. The API
+# (api/internal/schedule) and the website (web/src/lib/doors.ts) both read this file.
+#
+# Twelve doors open every other day, Dec 1 to Dec 23, at 06:00 CET. CET is UTC+1 and
+# station time is fixed: 06:00 CET is one moment worldwide (05:00 UTC), never 06:00 in
+# the player's own time zone, and daylight saving time does not apply. So every date is
+# written with +01:00, all year round.
+#
+# Every date needs its offset (+01:00 or Z); a date without one is rejected, never read
+# as UTC or as local time.
+#
+# Nothing about a door's content lives here. Project names stay out of this public
+# repository until their door is published.
+
+# Door 1 first. The number of doors is the length of this list, and each door must open
+# after the one before it.
+doors:
+  - 2026-12-01T06:00:00+01:00
+  - 2026-12-03T06:00:00+01:00
+  - 2026-12-05T06:00:00+01:00
+  - 2026-12-07T06:00:00+01:00
+  - 2026-12-09T06:00:00+01:00
+  - 2026-12-11T06:00:00+01:00
+  - 2026-12-13T06:00:00+01:00
+  - 2026-12-15T06:00:00+01:00
+  - 2026-12-17T06:00:00+01:00
+  - 2026-12-19T06:00:00+01:00
+  - 2026-12-21T06:00:00+01:00
+  - 2026-12-23T06:00:00+01:00
+
+# The "last incident" POLARIS-7's prompt line counts from: Christmas Eve at 06:00 CET.
+# Before the season it is last year's; from the finale on, it is this year's.
+christmasEve:
+  beforeSeason: 2025-12-24T06:00:00+01:00
+  finale: 2026-12-24T06:00:00+01:00

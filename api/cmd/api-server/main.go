@@ -15,6 +15,7 @@ import (
 	"github.com/katharinasick/aocn.dev/api/internal/app"
 	"github.com/katharinasick/aocn.dev/api/internal/db"
 	"github.com/katharinasick/aocn.dev/api/internal/email"
+	"github.com/katharinasick/aocn.dev/api/internal/schedule"
 	"github.com/katharinasick/aocn.dev/api/internal/subscribe"
 )
 
@@ -33,6 +34,13 @@ func main() {
 	cfg, err := app.ParseConfig()
 	if err != nil {
 		log.Error("Failed to parse config. Terminating.", "error", err)
+		os.Exit(1)
+	}
+
+	// Nothing reads the schedule yet. Loading it here means a missing or broken
+	// schedule.yaml stops the API at startup, not when the first door is asked for.
+	if _, err := schedule.Load(cfg.Schedule.Path); err != nil {
+		log.Error("Failed to load the schedule. Terminating.", "error", err)
 		os.Exit(1)
 	}
 

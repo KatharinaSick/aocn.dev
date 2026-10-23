@@ -1,0 +1,14 @@
+# A schedule for tests only, read by both web/src/lib/schedule.test.ts and
+# api/internal/schedule. Both must agree on every moment below; the expected UTC times
+# are written out in each test.
+#
+# Another year and only three doors, so nothing can pass by assuming the real season,
+# and three different offsets, so both sides have to apply them.
+doors:
+  - 2030-12-01T06:00:00+01:00 # 2030-12-01T05:00:00Z
+  - 2030-12-03T05:00:00Z # 2030-12-03T05:00:00Z
+  - 2030-12-04T19:30:00-05:00 # 2030-12-05T00:30:00Z
+
+christmasEve:
+  beforeSeason: 2029-12-24T06:00:00+01:00
+  finale: 2030-12-24T06:00:00+01:00

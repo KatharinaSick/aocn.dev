@@ -3,6 +3,7 @@ import { defineConfig, fontProviders } from 'astro/config';
 import netlify from '@astrojs/netlify';
 import sitemap from '@astrojs/sitemap';
 import vue from '@astrojs/vue';
+import { schedule } from './plugins/schedule.ts';
 
 // The Netlify adapter is loaded for `astro build` only. `astro dev` renders on-demand
 // pages itself, and loading the adapter in dev pulls in Netlify's platform emulation
@@ -53,6 +54,8 @@ export default defineConfig({
         '^/api/': { target: 'http://localhost:8080', rewrite: (path) => path.replace(/^\/api/, '') },
       },
     },
+    // schedule.yaml at the repository root, as `virtual:schedule` (see plugins/schedule.ts).
+    plugins: [schedule()],
   },
   // Self-hosted: Astro downloads the font files at build time and serves them from
   // aocn.dev, so no visitor request goes to a third-party font CDN.

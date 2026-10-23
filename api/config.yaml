@@ -7,6 +7,12 @@ server:
   # where app.ParseConfig falls back to 8080.
   port: ${PORT}
 
+# When each door opens, shared with the website. Relative to the working directory: api/
+# locally, so the file at the repository root; /app in the container, which copies it
+# to /schedule.yaml.
+schedule:
+  path: ../schedule.yaml
+
 site:
   # Where links in emails point. Empty falls back to https://aocn.dev; set
   # SITE_URL=http://localhost:4321 to click a confirmation link through locally.

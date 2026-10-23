@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'api/**'
+      # Read by the API at startup and by its tests.
+      - 'schedule.yaml'
+      - 'testdata/**'
       - '.github/workflows/api-ci.yml'
 
 # Both jobs are read-only, so cancelling a superseded run costs nothing.
@@ -58,5 +61,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The repository root is the context, so the image can carry schedule.yaml.
       - name: Build
-        run: docker build -t aocn-api:${{ github.sha }} api
+        run: docker build -f api/Dockerfile -t aocn-api:${{ github.sha }} .
